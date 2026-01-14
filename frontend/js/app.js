@@ -72,30 +72,13 @@ async function initApp() {
 
     } catch (error) {
         console.error('App initialization error:', error);
-        // Show an actionable error message with retry
         document.getElementById('loading').innerHTML = `
-            <div class="text-center">
-                <div class="text-red-600">
-                    <i class="fas fa-exclamation-triangle text-4xl mb-4"></i>
-                    <p class="text-lg font-semibold">Gagal memuat aplikasi</p>
-                    <p class="text-sm mt-2">Periksa koneksi atau coba lagi.</p>
-                    <button id="retry-btn" class="mt-4 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700">Coba lagi</button>
-                </div>
+            <div class="text-red-600">
+                <i class="fas fa-exclamation-triangle text-4xl mb-4"></i>
+                <p class="text-lg font-semibold">Gagal memuat aplikasi</p>
+                <p class="text-sm mt-2">Silakan refresh halaman</p>
             </div>
         `;
-
-        // Attach retry handler
-        const retryBtn = document.getElementById('retry-btn');
-        if (retryBtn) {
-            retryBtn.addEventListener('click', () => {
-                document.getElementById('loading').innerHTML = `
-                    <div class="inline-block loading-spinner rounded-full h-12 w-12 border-b-2 border-emerald-600"></div>
-                    <p class="mt-4 text-gray-600">Memuat aplikasi...</p>
-                `;
-                // Re-run initialization
-                initApp();
-            });
-        }
     }
 }
 
@@ -130,29 +113,23 @@ function populateHouseCodes() {
     });
 }
 
-// Helper: fetch with timeout (avoids indefinite hangs)
-function fetchWithTimeout(url, options = {}, timeout = 8000) {
-    return Promise.race([
-        fetch(url, options),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), timeout))
-    ]);
-}
-
 async function loadData() {
     try {
-        // Load registrations with timeout
-        const regResponse = await fetchWithTimeout(`${API_BASE_URL}/api/registrations`, {}, 8000);
-        if (!regResponse.ok) throw new Error(`Registrations fetch failed: ${regResponse.status}`);
+        // Load registrations
+        const regResponse = await fetch(`${API_BASE_URL}/api/registrations`);
         const regData = await regResponse.json();
 
-        if (regData.success) registrations = regData.data;
+        if (regData.success) {
+            registrations = regData.data;
+        }
 
-        // Load settings with timeout
-        const settingsResponse = await fetchWithTimeout(`${API_BASE_URL}/api/settings`, {}, 8000);
-        if (!settingsResponse.ok) throw new Error(`Settings fetch failed: ${settingsResponse.status}`);
+        // Load settings
+        const settingsResponse = await fetch(`${API_BASE_URL}/api/settings`);
         const settingsData = await settingsResponse.json();
 
-        if (settingsData.success) settings = settingsData.data;
+        if (settingsData.success) {
+            settings = settingsData.data;
+        }
 
     } catch (error) {
         console.error('Error loading data:', error);
