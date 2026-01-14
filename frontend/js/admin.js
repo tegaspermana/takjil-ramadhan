@@ -5,6 +5,17 @@
 const API_BASE_URL = window.location.origin;
 const ITEMS_PER_PAGE = 10;
 
+// Available house codes (same source as frontend)
+const HOUSE_CODES = [
+    'WB-01', 'WB-02', 'WB-03', 'WB-04', 'WB-05', 'WB-06', 'WB-07', 'WB-08', 'WB-09', 'WB-10', 'WB-11', 'WB-12', 'WB-13', 'WB-14', 'WB-15', 'WB-16', 'WB-17', 'WB-18', 'WB-19', 'WB-20', 'WB-21', 'WB-22', 'WB-23', 'WB-24', 'WB-25', 'WB-26', 'WB-27', 'WB-28', 'WB-29', 'WB-30', 'WB-31', 'WB-32', 'WB-33', 'WB-34', 'WB-35', 'WB-36', 'WB-37', 'WB-38', 'WB-39', 'WB-40', 'WB-41', 'WB-42', 'WB-43', 'WB-44', 'WB-45', 'WB-46', 'WB-47', 'WB-48',
+    'PN-01', 'PN-02', 'PN-03', 'PN-04', 'PN-05', 'PN-06', 'PN-07', 'PN-08', 'PN-09', 'PN-10', 'PN-11', 'PN-12', 'PN-13', 'PN-14', 'PN-15', 'PN-16', 'PN-17', 'PN-18', 'PN-19', 'PN-20', 'PN-21', 'PN-22', 'PN-23', 'PN-24', 'PN-25', 'PN-26', 'PN-27', 'PN-28', 'PN-29', 'PN-30', 'PN-31', 'PN-32', 'PN-33', 'PN-34', 'PN-35', 'PN-36', 'PN-37', 'PN-38', 'PN-39', 'PN-40', 'PN-41', 'PN-42', 'PN-43', 'PN-44', 'PN-45', 'PN-46', 'PN-47',
+    'LP-01', 'LP-02', 'LP-03', 'LP-04', 'LP-05', 'LP-06', 'LP-07', 'LP-08', 'LP-09', 'LP-10', 'LP-11', 'LP-12', 'LP-13', 'LP-14', 'LP-15', 'LP-16',
+    'PW-01', 'PW-02', 'PW-03', 'PW-04', 'PW-05', 'PW-06', 'PW-07', 'PW-08', 'PW-09', 'PW-10', 'PW-11', 'PW-12', 'PW-13', 'PW-14',
+    'SL-01', 'SL-02', 'SL-03', 'SL-04', 'SL-05', 'SL-06', 'SL-07', 'SL-08', 'SL-09', 'SL-10', 'SL-11', 'SL-12', 'SL-13', 'SL-14',
+    'LN-01', 'LN-02', 'LN-03', 'LN-04', 'LN-05', 'LN-06', 'LN-07', 'LN-08', 'LN-09', 'LN-10', 'LN-11', 'LN-12',
+    'MB-01', 'MB-02', 'MB-03'
+];
+
 // Global State
 let registrations = [];
 let settings = {};
@@ -53,10 +64,12 @@ async function handleLogin() {
     }
 }
 
-function showAdminDashboard() {
+async function showAdminDashboard() {
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('admin-dashboard').classList.remove('hidden');
-    loadAdminData();
+    await loadAdminData();
+    // Initialize edit modal autocomplete
+    initEditHouseAutocomplete();
 }
 
 function handleLogout() {
@@ -151,6 +164,21 @@ function renderTable() {
             const dateRegs = registrations.filter(r => r.tanggal === reg.tanggal);
             const status = dateRegs.length >= 2 ? 'full' : dateRegs.length === 1 ? 'partial' : 'available';
 
+            // compute full date display if settings.start_date provided
+            let dayName = '';
+            let fullDateStr = '';
+            if (settings && settings.start_date) {
+                try {
+                    const base = new Date(settings.start_date + 'T00:00:00');
+                    const dateObj = new Date(base);
+                    dateObj.setDate(base.getDate() + (reg.tanggal - 1));
+                    dayName = dateObj.toLocaleDateString('id-ID', { weekday: 'long' });
+                    fullDateStr = dateObj.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+                } catch (err) {
+                    // ignore
+                }
+            }
+
             const row = document.createElement('tr');
             row.className = 'table-row';
             row.innerHTML = `
@@ -159,6 +187,7 @@ function renderTable() {
                     <span class="px-3 py-1 bg-emerald-100 text-emerald-800 rounded-full text-sm font-medium">
                         ${reg.tanggal} Ramadhan
                     </span>
+                    ${dayName ? `<div class="text-sm text-gray-500 mt-1">${dayName} • ${fullDateStr}</div>` : ''}
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap font-medium">${reg.kode_jalan}</td>
                 <td class="px-6 py-4">${reg.nama_keluarga}</td>
@@ -175,6 +204,9 @@ function renderTable() {
                     </span>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
+                    <button onclick="openEditModal(${reg.id})" class="text-blue-600 hover:text-blue-800 p-2 rounded-lg hover:bg-blue-50 transition mr-2">
+                        <i class="fas fa-edit"></i>
+                    </button>
                     <button onclick="deleteRegistration(${reg.id})" 
                             class="text-red-600 hover:text-red-800 p-2 rounded-lg hover:bg-red-50 transition">
                         <i class="fas fa-trash"></i>
@@ -317,6 +349,172 @@ async function togglePhase2() {
     } catch (error) {
         alert('Koneksi error');
     }
+}
+
+// Edit modal handlers
+function openEditModal(id) {
+    const reg = registrations.find(r => r.id === id);
+    if (!reg) return alert('Data tidak ditemukan');
+
+    document.getElementById('edit-id').value = reg.id;
+    document.getElementById('edit-tanggal').value = reg.tanggal;
+    document.getElementById('edit-house-code').value = reg.kode_jalan;
+    document.getElementById('edit-family-name').value = reg.nama_keluarga;
+    document.getElementById('edit-whatsapp').value = reg.whatsapp;
+    document.getElementById('edit-error').classList.add('hidden');
+
+    document.getElementById('edit-modal').classList.remove('hidden');
+    document.getElementById('edit-modal').classList.add('flex');
+}
+
+function closeEditModal(refresh = false) {
+    document.getElementById('edit-modal').classList.add('hidden');
+    document.getElementById('edit-modal').classList.remove('flex');
+    if (refresh) refreshData();
+}
+
+// Handle edit form submit
+const editForm = document.getElementById('edit-form');
+if (editForm) {
+    editForm.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        const id = parseInt(document.getElementById('edit-id').value);
+        const tanggal = parseInt(document.getElementById('edit-tanggal').value);
+        const kode_jalan = document.getElementById('edit-house-code').value.trim();
+        const nama_keluarga = document.getElementById('edit-family-name').value.trim();
+        const whatsapp = document.getElementById('edit-whatsapp').value.trim();
+        const errorDiv = document.getElementById('edit-error');
+
+        // Basic validation
+        if (!tanggal || !kode_jalan || !nama_keluarga || !whatsapp) {
+            errorDiv.textContent = 'Semua field harus diisi';
+            errorDiv.classList.remove('hidden');
+            return;
+        }
+
+        // Validate whatsapp (expect starting with 62)
+        if (!/^62\d{9,}$/.test(whatsapp)) {
+            errorDiv.textContent = 'Format WhatsApp tidak valid. Harus diawali 62';
+            errorDiv.classList.remove('hidden');
+            return;
+        }
+
+        // Validate kode_jalan exists
+        if (!HOUSE_CODES.includes(kode_jalan)) {
+            errorDiv.textContent = 'Kode Jalan tidak valid. Pilih dari daftar.';
+            errorDiv.classList.remove('hidden');
+            return;
+        }
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/registrations/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ tanggal, kode_jalan, nama_keluarga, whatsapp })
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                closeEditModal(true);
+            } else {
+                errorDiv.textContent = data.error || 'Gagal menyimpan';
+                errorDiv.classList.remove('hidden');
+            }
+        } catch (error) {
+            console.error('Edit save error:', error);
+            errorDiv.textContent = 'Koneksi error';
+            errorDiv.classList.remove('hidden');
+        }
+    });
+}
+
+function initEditHouseAutocomplete() {
+    const input = document.getElementById('edit-house-code');
+    const suggestions = document.getElementById('edit-house-suggestions');
+    const datalist = document.getElementById('edit-house-datalist');
+    if (!input || !suggestions) return;
+
+    // populate fallback datalist
+    if (datalist) {
+        datalist.innerHTML = '';
+        HOUSE_CODES.forEach(code => {
+            const opt = document.createElement('option');
+            opt.value = code;
+            datalist.appendChild(opt);
+        });
+    }
+
+    let selected = -1;
+
+    function render(list) {
+        suggestions.innerHTML = '';
+        if (!list.length) {
+            suggestions.classList.add('hidden');
+            return;
+        }
+        list.forEach((code, idx) => {
+            const div = document.createElement('div');
+            div.className = 'px-3 py-2 cursor-pointer hover:bg-gray-100';
+            div.setAttribute('role', 'option');
+            div.textContent = code;
+            div.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                input.value = code;
+                hide();
+            });
+            suggestions.appendChild(div);
+        });
+        suggestions.classList.remove('hidden');
+    }
+
+    function filter(val) {
+        const q = val.trim().toLowerCase();
+        if (!q) return HOUSE_CODES.slice(0, 10);
+        return HOUSE_CODES.filter(c => c.toLowerCase().includes(q)).slice(0, 10);
+    }
+
+    function hide() {
+        suggestions.classList.add('hidden');
+        selected = -1;
+    }
+
+    input.addEventListener('input', (e) => {
+        const list = filter(e.target.value);
+        selected = -1;
+        render(list);
+    });
+
+    input.addEventListener('keydown', (e) => {
+        const children = suggestions.children;
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            if (selected < children.length - 1) selected++;
+            else selected = 0;
+            if (children[selected]) {
+                Array.from(children).forEach(c => c.classList.remove('bg-gray-100'));
+                children[selected].classList.add('bg-gray-100');
+            }
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            if (selected > 0) selected--;
+            else selected = children.length - 1;
+            if (children[selected]) {
+                Array.from(children).forEach(c => c.classList.remove('bg-gray-100'));
+                children[selected].classList.add('bg-gray-100');
+            }
+        } else if (e.key === 'Enter') {
+            if (selected >= 0 && suggestions.children[selected]) {
+                e.preventDefault();
+                input.value = suggestions.children[selected].textContent;
+                hide();
+            }
+        } else if (e.key === 'Escape') {
+            hide();
+        }
+    });
+
+    input.addEventListener('blur', () => setTimeout(hide, 150));
+    input.addEventListener('focus', (e) => render(filter(e.target.value)));
 }
 
 function updatePhaseToggle() {

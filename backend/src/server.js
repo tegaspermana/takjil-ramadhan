@@ -204,6 +204,68 @@ app.delete('/api/registrations/:id', (req, res) => {
     }
 });
 
+// Update registration
+app.put('/api/registrations/:id', (req, res) => {
+    try {
+        const id = parseInt(req.params.id);
+        const { tanggal, kode_jalan, nama_keluarga, whatsapp } = req.body;
+
+        if (!tanggal || !kode_jalan || !nama_keluarga || !whatsapp) {
+            return res.status(400).json({ success: false, error: 'Semua field harus diisi' });
+        }
+
+        const dateNum = parseInt(tanggal);
+        if (!isValidDate(dateNum)) {
+            return res.status(400).json({ success: false, error: 'Tanggal harus antara 1-30' });
+        }
+
+        // Check phase 2 availability
+        if (dateNum > 20) {
+            const settingsRow = db.prepare('SELECT phase2_unlocked FROM settings WHERE id = 1').get();
+            if (!settingsRow.phase2_unlocked) {
+                return res.status(400).json({ success: false, error: 'Tanggal 21-30 belum dibuka' });
+            }
+        }
+
+        // Validate WhatsApp format
+        if (!isValidWhatsApp(whatsapp)) {
+            return res.status(400).json({ success: false, error: 'Format WhatsApp tidak valid. Harus diawali 62' });
+        }
+
+        // Check max 2 registrations per day excluding this id
+        const countStmt = db.prepare('SELECT COUNT(*) as count FROM registrations WHERE tanggal = ? AND id != ?');
+        const countResult = countStmt.get(dateNum, id);
+        if (countResult.count >= 2) {
+            return res.status(400).json({ success: false, error: 'Tanggal ini sudah penuh (2 keluarga)' });
+        }
+
+        // Check duplicate house code for same date excluding this id
+        const duplicateStmt = db.prepare('SELECT COUNT(*) as count FROM registrations WHERE tanggal = ? AND kode_jalan = ? AND id != ?');
+        const duplicateResult = duplicateStmt.get(dateNum, kode_jalan, id);
+        if (duplicateResult.count > 0) {
+            return res.status(400).json({ success: false, error: 'Kode jalan ini sudah terdaftar di tanggal ini' });
+        }
+
+        const updateStmt = db.prepare(`
+            UPDATE registrations
+            SET tanggal = ?, kode_jalan = ?, nama_keluarga = ?, whatsapp = ?
+            WHERE id = ?
+        `);
+
+        const result = updateStmt.run(dateNum, kode_jalan, nama_keluarga, whatsapp, id);
+
+        if (result.changes === 0) {
+            return res.status(404).json({ success: false, error: 'Data tidak ditemukan' });
+        }
+
+        res.json({ success: true, message: 'Data berhasil diperbarui' });
+
+    } catch (error) {
+        console.error('Error updating registration:', error);
+        res.status(500).json({ success: false, error: 'Internal server error' });
+    }
+});
+
 // Get settings
 app.get('/api/settings', (req, res) => {
     try {

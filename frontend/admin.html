@@ -209,6 +209,93 @@
             </div>
           </div>
 
+          <!-- Edit Modal -->
+          <div id="edit-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-4">
+            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md modal-animation">
+              <div class="p-6">
+                <div class="flex justify-between items-center mb-6">
+                  <h3 class="text-xl font-bold text-gray-800" id="edit-modal-title">Edit Pendaftaran</h3>
+                  <button onclick="closeEditModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times text-2xl"></i>
+                  </button>
+                </div>
+
+                <form id="edit-form" class="space-y-4">
+                  <input type="hidden" id="edit-id" />
+
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2"> Tanggal * </label>
+                    <input
+                      type="number"
+                      id="edit-tanggal"
+                      min="1"
+                      max="30"
+                      required
+                      class="w-full px-4 py-3 border border-gray-300 rounded-lg"
+                    />
+                  </div>
+
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2"> Kode Jalan * </label>
+                    <div class="relative">
+                      <input
+                        type="text"
+                        id="edit-house-code"
+                        required
+                        class="w-full px-4 py-3 border border-gray-300 rounded-lg"
+                      />
+                      <div
+                        id="edit-house-suggestions"
+                        role="listbox"
+                        class="absolute z-50 mt-1 w-full bg-white rounded-lg shadow-lg hidden max-h-60 overflow-auto"
+                      ></div>
+                      <datalist id="edit-house-datalist" style="display: none"></datalist>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2"> Nama Keluarga * </label>
+                    <input
+                      type="text"
+                      id="edit-family-name"
+                      required
+                      class="w-full px-4 py-3 border border-gray-300 rounded-lg"
+                    />
+                  </div>
+
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2"> Nomor WhatsApp * </label>
+                    <input
+                      type="tel"
+                      id="edit-whatsapp"
+                      required
+                      class="w-full px-4 py-3 border border-gray-300 rounded-lg"
+                    />
+                  </div>
+
+                  <div id="edit-error" class="hidden p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg"></div>
+
+                  <div class="flex space-x-3 pt-4">
+                    <button
+                      type="button"
+                      onclick="closeEditModal(true)"
+                      class="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-medium"
+                    >
+                      Batal
+                    </button>
+                    <button
+                      type="submit"
+                      id="edit-save-btn"
+                      class="flex-1 px-4 py-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition font-medium"
+                    >
+                      Simpan
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+
           <div class="overflow-x-auto">
             <table class="w-full">
               <thead class="bg-gray-50">
