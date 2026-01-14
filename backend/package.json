@@ -7,7 +7,6 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
-    "build:css": "npx tailwindcss -i ./frontend/css/input.css -o ./frontend/css/tailwind.css --minify",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
@@ -24,9 +23,6 @@
     "helmet": "^7.0.0"
   },
   "devDependencies": {
-    "nodemon": "^3.0.1",
-    "tailwindcss": "^3.4.8",
-    "postcss": "^8.4.0",
-    "autoprefixer": "^10.4.0"
+    "nodemon": "^3.0.1"
   }
 }
