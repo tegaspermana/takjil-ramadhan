@@ -283,9 +283,19 @@ function openRegistrationModal(date) {
     document.getElementById('registration-modal').classList.add('flex');
 }
 
-function closeModal() {
+function closeModal(refresh = false) {
     document.getElementById('registration-modal').classList.add('hidden');
     document.getElementById('registration-modal').classList.remove('flex');
+
+    if (refresh) {
+        // Re-fetch data and update UI without a full page reload
+        loadData().then(() => {
+            renderDateGrid();
+            updateStats();
+        }).catch(err => {
+            console.error('Error refreshing data after modal close:', err);
+        });
+    }
 }
 
 function closeSuccessModal() {
