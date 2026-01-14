@@ -24,7 +24,9 @@ if (!fs.existsSync(dbDir)) {
 // Middleware
 app.use(helmet({
     contentSecurityPolicy: false,
-    crossOriginEmbedderPolicy: false
+    crossOriginEmbedderPolicy: false,
+    crossOriginResourcePolicy: false,
+    crossOriginOpenerPolicy: false
 }));
 app.use(cors());
 app.use(express.json());
