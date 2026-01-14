@@ -54,6 +54,9 @@ async function initApp() {
         // Load house codes dropdown
         populateHouseCodes();
 
+        // Initialize richer autocomplete for Kode Jalan
+        initHouseAutocomplete();
+
         // Load initial data
         await loadData();
 
@@ -100,34 +103,28 @@ async function initApp() {
 }
 
 function populateHouseCodes() {
-    const select = document.getElementById('house-code');
-    if (!select) return;
+    const input = document.getElementById('house-code');
+    const datalist = document.getElementById('house-code-list');
+    if (!input) return;
 
-    // Group by prefix for better organization
-    const grouped = HOUSE_CODES.reduce((acc, code) => {
-        const prefix = code.split('-')[0];
-        if (!acc[prefix]) acc[prefix] = [];
-        acc[prefix].push(code);
-        return acc;
-    }, {});
-
-    // Clear existing options
-    select.innerHTML = '<option value="">Pilih Kode Jalan</option>';
-
-    // Add optgroups for each prefix
-    Object.keys(grouped).sort().forEach(prefix => {
-        const optgroup = document.createElement('optgroup');
-        optgroup.label = prefix;
-
-        grouped[prefix].forEach(code => {
+    if (datalist) {
+        datalist.innerHTML = '';
+        HOUSE_CODES.forEach(code => {
+            const opt = document.createElement('option');
+            opt.value = code;
+            datalist.appendChild(opt);
+        });
+    } else {
+        // Fallback for select element (legacy)
+        const select = input;
+        select.innerHTML = '<option value="">Pilih Kode Jalan</option>';
+        HOUSE_CODES.forEach(code => {
             const option = document.createElement('option');
             option.value = code;
             option.textContent = code;
-            optgroup.appendChild(option);
+            select.appendChild(option);
         });
-
-        select.appendChild(optgroup);
-    });
+    }
 }
 
 // Helper: fetch with timeout (avoids indefinite hangs)
@@ -332,6 +329,12 @@ async function handleFormSubmit(e) {
         return;
     }
 
+    // Ensure the house code matches known codes
+    if (!HOUSE_CODES.includes(houseCode)) {
+        showError('Kode Jalan tidak valid. Pilih dari daftar.');
+        return;
+    }
+
     const whatsappClean = whatsapp.replace(/\D/g, '');
     if (!/^08[0-9]{9,}$/.test(whatsappClean)) {
         showError('Nomor WhatsApp tidak valid. Harus diawali 08 dan minimal 10 digit');
@@ -403,6 +406,109 @@ function showError(message) {
     const errorDiv = document.getElementById('form-error');
     errorDiv.textContent = message;
     errorDiv.classList.remove('hidden');
+}
+
+// Initialize richer autocomplete for house codes
+function initHouseAutocomplete() {
+    const input = document.getElementById('house-code');
+    const suggestions = document.getElementById('house-suggestions');
+    if (!input || !suggestions) return;
+
+    let items = [];
+    let selected = -1;
+
+    function render(list) {
+        suggestions.innerHTML = '';
+        if (!list.length) {
+            suggestions.classList.add('hidden');
+            input.setAttribute('aria-expanded', 'false');
+            return;
+        }
+
+        list.forEach((code, idx) => {
+            const div = document.createElement('div');
+            div.className = 'px-3 py-2 cursor-pointer hover:bg-gray-100';
+            div.setAttribute('role', 'option');
+            div.textContent = code;
+            div.addEventListener('mousedown', (e) => {
+                // use mousedown to select before blur
+                e.preventDefault();
+                select(idx);
+                choose();
+            });
+            suggestions.appendChild(div);
+        });
+        suggestions.classList.remove('hidden');
+        input.setAttribute('aria-expanded', 'true');
+    }
+
+    function filter(val) {
+        const q = val.trim().toLowerCase();
+        if (!q) return HOUSE_CODES.slice(0, 10);
+        return HOUSE_CODES.filter(c => c.toLowerCase().includes(q)).slice(0, 10);
+    }
+
+    function select(idx) {
+        const children = suggestions.children;
+        if (selected >= 0 && children[selected]) children[selected].classList.remove('bg-gray-100');
+        selected = idx;
+        if (selected >= 0 && children[selected]) children[selected].classList.add('bg-gray-100');
+    }
+
+    function choose() {
+        if (selected >= 0 && suggestions.children[selected]) {
+            input.value = suggestions.children[selected].textContent;
+        }
+        hide();
+    }
+
+    function hide() {
+        suggestions.classList.add('hidden');
+        input.setAttribute('aria-expanded', 'false');
+        selected = -1;
+    }
+
+    input.addEventListener('input', (e) => {
+        const list = filter(e.target.value);
+        items = list;
+        selected = -1;
+        render(list);
+    });
+
+    input.addEventListener('keydown', (e) => {
+        const children = suggestions.children;
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            if (selected < children.length - 1) select(selected + 1);
+            else if (children.length) select(0);
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            if (selected > 0) select(selected - 1);
+            else if (children.length) select(children.length - 1);
+        } else if (e.key === 'Enter') {
+            if (selected >= 0) {
+                e.preventDefault();
+                choose();
+            }
+        } else if (e.key === 'Escape') {
+            hide();
+        }
+    });
+
+    // Hide on blur (allow click selection via mousedown)
+    input.addEventListener('blur', () => setTimeout(hide, 150));
+
+    // Clicking outside should hide
+    document.addEventListener('click', (e) => {
+        if (!input.contains(e.target) && !suggestions.contains(e.target)) hide();
+    });
+
+    // Pre-populate suggestions on focus
+    input.addEventListener('focus', (e) => {
+        const list = filter(e.target.value);
+        items = list;
+        render(list);
+    });
 }
 
 // Expose functions to global scope
