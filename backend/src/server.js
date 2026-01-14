@@ -11,7 +11,9 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 // Initialize Express app
 const app = express();
 const PORT = process.env.PORT || 3001;
-const DB_PATH = process.env.DB_PATH || join(__dirname, '..', '..', 'database', 'takjil.db');
+const defaultDb1 = join(__dirname, '..', 'database', 'takjil.db');
+const defaultDb2 = join(__dirname, '..', '..', 'database', 'takjil.db');
+const DB_PATH = process.env.DB_PATH || (fs.existsSync(dirname(defaultDb1)) ? defaultDb1 : defaultDb2);
 
 // Ensure database directory exists
 const dbDir = dirname(DB_PATH);
@@ -26,7 +28,7 @@ app.use(helmet({
 }));
 app.use(cors());
 app.use(express.json());
-app.use(express.static(join(__dirname, '..', '..', 'frontend')));
+app.use(express.static(join(__dirname, '..', 'frontend')));
 
 // Initialize database
 function initDatabase() {
@@ -305,11 +307,11 @@ app.get('/api/health', (req, res) => {
 
 // Serve frontend pages
 app.get('/', (req, res) => {
-    res.sendFile(join(__dirname, '..', '..', 'frontend', 'index.html'));
+    res.sendFile(join(__dirname, '..', 'frontend', 'index.html'));
 });
 
 app.get('/admin', (req, res) => {
-    res.sendFile(join(__dirname, '..', '..', 'frontend', 'admin.html'));
+    res.sendFile(join(__dirname, '..', 'frontend', 'admin.html'));
 });
 
 // 404 handler
