@@ -6,7 +6,9 @@ WORKDIR /app
 
 # Install only production deps
 COPY backend/package*.json ./
-RUN npm ci --production
+# Use `npm install` to avoid failing when no package-lock.json is present.
+# For reproducible builds, generate and commit package-lock.json and switch back to `npm ci`.
+RUN npm install --production --no-audit --no-fund
 
 # Copy backend app source and frontend into image
 COPY backend/. .
