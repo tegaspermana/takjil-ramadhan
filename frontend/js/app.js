@@ -173,6 +173,18 @@ function renderDateGrid() {
         const filled = dateRegs.length;
         const available = 2 - filled;
 
+        // Compute actual calendar date if start_date is configured
+        let actualDateStr = '';
+        if (settings && settings.start_date) {
+            try {
+                const base = new Date(settings.start_date + 'T00:00:00');
+                base.setDate(base.getDate() + (date - 1));
+                actualDateStr = base.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+            } catch (err) {
+                actualDateStr = '';
+            }
+        }
+
         // Determine status
         let status = 'available';
         let statusClass = 'status-available';
@@ -195,7 +207,7 @@ function renderDateGrid() {
                  onclick="${!isLocked ? `openRegistrationModal(${date})` : ''}">
                 <div class="text-center">
                     <div class="font-bold text-xl mb-1">${date}</div>
-                    <div class="text-sm opacity-90 mb-2">${dayName}</div>
+                    <div class="text-sm opacity-90 mb-2">${dayName} ${actualDateStr ? '• ' + actualDateStr : ''}</div>
                     <div class="text-xs font-semibold bg-white/30 px-2 py-1 rounded-full inline-block">
                         ${filled}/2
                     </div>

@@ -328,6 +328,41 @@ function updatePhaseToggle() {
         btn.innerHTML = '<i class="fas fa-lock-open mr-2"></i>Buka Tanggal 21-30';
         btn.className = 'px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition';
     }
+
+    // Populate start date input if available
+    const startInput = document.getElementById('start-date-input');
+    if (startInput) {
+        startInput.value = settings.start_date || '';
+    }
+}
+
+async function saveSettings() {
+    const startInput = document.getElementById('start-date-input');
+    const startDate = startInput ? startInput.value : null;
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/settings`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                phase2_unlocked: settings.phase2_unlocked,
+                admin_password: settings.admin_password,
+                app_title: settings.app_title,
+                start_date: startDate || null
+            })
+        });
+
+        const data = await response.json();
+        if (data.success) {
+            settings.start_date = startDate || null;
+            alert('Tanggal mulai tersimpan');
+        } else {
+            alert('Gagal menyimpan settings');
+        }
+    } catch (error) {
+        console.error('Error saving settings:', error);
+        alert('Koneksi error saat menyimpan');
+    }
 }
 
 function printTable() {

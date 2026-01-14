@@ -51,11 +51,24 @@ function initDatabase() {
             phase2_unlocked BOOLEAN DEFAULT FALSE,
             admin_password TEXT DEFAULT 'takjil2026',
             app_title TEXT DEFAULT 'Takjil Ramadhan 1447H',
+            start_date TEXT DEFAULT NULL,
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
         );
         
         INSERT OR IGNORE INTO settings (id) VALUES (1);
     `);
+
+    // Add start_date column if it's missing in older DBs
+    const cols = db.prepare("PRAGMA table_info('settings')").all();
+    const hasStartDate = cols.some(c => c.name === 'start_date');
+    if (!hasStartDate) {
+        try {
+            db.prepare("ALTER TABLE settings ADD COLUMN start_date TEXT DEFAULT NULL").run();
+            console.log('Added start_date column to settings');
+        } catch (err) {
+            console.warn('Could not add start_date column:', err.message);
+        }
+    }
 
     console.log('Database initialized at:', DB_PATH);
     return db;
@@ -206,13 +219,19 @@ app.get('/api/settings', (req, res) => {
 // Update settings
 app.put('/api/settings', (req, res) => {
     try {
-        const { phase2_unlocked, admin_password, app_title } = req.body;
+        const { phase2_unlocked, admin_password, app_title, start_date } = req.body;
+
+        // Validate start_date if present (expect YYYY-MM-DD)
+        if (start_date && !/^\d{4}-\d{2}-\d{2}$/.test(start_date)) {
+            return res.status(400).json({ success: false, error: 'start_date harus dalam format YYYY-MM-DD' });
+        }
 
         const stmt = db.prepare(`
             UPDATE settings 
             SET phase2_unlocked = ?, 
                 admin_password = COALESCE(?, admin_password),
                 app_title = COALESCE(?, app_title),
+                start_date = COALESCE(?, start_date),
                 updated_at = CURRENT_TIMESTAMP
             WHERE id = 1
         `);
@@ -220,7 +239,8 @@ app.put('/api/settings', (req, res) => {
         stmt.run(
             phase2_unlocked ? 1 : 0,
             admin_password,
-            app_title
+            app_title,
+            start_date
         );
 
         res.json({ success: true, message: 'Settings updated' });

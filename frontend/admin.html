@@ -144,29 +144,43 @@
         <!-- Controls -->
         <div class="bg-white rounded-xl shadow-sm p-6 mb-8">
           <h2 class="text-xl font-bold text-gray-800 mb-4">Kontrol Admin</h2>
-          <div class="flex flex-wrap gap-3">
-            <button
-              onclick="exportToCSV()"
-              class="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition"
-            >
-              <i class="fas fa-file-excel mr-2"></i>
-              Export CSV
-            </button>
-            <button
-              onclick="togglePhase2()"
-              id="phase-toggle"
-              class="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition"
-            >
-              <i class="fas fa-lock-open mr-2"></i>
-              Buka Tanggal 21-30
-            </button>
-            <button
-              onclick="printTable()"
-              class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-            >
-              <i class="fas fa-print mr-2"></i>
-              Print
-            </button>
+          <div class="flex flex-col md:flex-row md:items-center md:space-x-4">
+            <div class="flex flex-wrap gap-3 mb-4 md:mb-0">
+              <button
+                onclick="exportToCSV()"
+                class="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition"
+              >
+                <i class="fas fa-file-excel mr-2"></i>
+                Export CSV
+              </button>
+              <button
+                onclick="togglePhase2()"
+                id="phase-toggle"
+                class="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition"
+              >
+                <i class="fas fa-lock-open mr-2"></i>
+                Buka Tanggal 21-30
+              </button>
+              <button
+                onclick="printTable()"
+                class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+              >
+                <i class="fas fa-print mr-2"></i>
+                Print
+              </button>
+            </div>
+
+            <div class="flex items-center space-x-3">
+              <label for="start-date-input" class="text-sm font-medium text-gray-700">Tanggal 1 (Mulai):</label>
+              <input type="date" id="start-date-input" class="px-3 py-2 border border-gray-300 rounded-md" />
+              <button
+                id="save-settings-btn"
+                onclick="saveSettings()"
+                class="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition"
+              >
+                Simpan
+              </button>
+            </div>
           </div>
         </div>
 
