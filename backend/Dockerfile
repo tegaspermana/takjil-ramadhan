@@ -4,20 +4,15 @@
 FROM node:18-alpine AS builder
 WORKDIR /app
 
-# Install deps (including dev deps needed for building Tailwind)
+# Install only production deps
 COPY backend/package*.json ./
-# Use npm install (dev deps included) so we can build Tailwind CSS during image build.
-RUN npm install --no-audit --no-fund
+# Use `npm install` to avoid failing when no package-lock.json is present.
+# For reproducible builds, generate and commit package-lock.json and switch back to `npm ci`.
+RUN npm install --production --no-audit --no-fund
 
 # Copy backend app source and frontend into image
 COPY backend/. .
 COPY frontend ./frontend
-
-# Build Tailwind CSS into frontend/css/tailwind.css
-RUN npm run build:css
-
-# Remove dev dependencies to keep runtime image lean
-RUN npm prune --production
 
 # ---- Runner: minimal final image ----
 FROM node:18-alpine AS runner
