@@ -168,20 +168,22 @@ function renderDateGrid() {
     let html = '';
 
     for (let date = 1; date <= 30; date++) {
-        const dayName = dayNames[(date - 1) % 7];
         const dateRegs = registrations.filter(r => r.tanggal === date);
         const filled = dateRegs.length;
         const available = 2 - filled;
 
-        // Compute actual calendar date if start_date is configured
-        let actualDateStr = '';
+        // Compute full calendar date and weekday if start_date is configured
+        let dayName = dayNames[(date - 1) % 7];
+        let fullDateStr = '';
         if (settings && settings.start_date) {
             try {
                 const base = new Date(settings.start_date + 'T00:00:00');
-                base.setDate(base.getDate() + (date - 1));
-                actualDateStr = base.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+                const dateObj = new Date(base);
+                dateObj.setDate(base.getDate() + (date - 1));
+                dayName = dateObj.toLocaleDateString('id-ID', { weekday: 'long' });
+                fullDateStr = dateObj.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
             } catch (err) {
-                actualDateStr = '';
+                // keep defaults
             }
         }
 
@@ -207,7 +209,7 @@ function renderDateGrid() {
                  onclick="${!isLocked ? `openRegistrationModal(${date})` : ''}">
                 <div class="text-center">
                     <div class="font-bold text-xl mb-1">${date}</div>
-                    <div class="text-sm opacity-90 mb-2">${dayName} ${actualDateStr ? '• ' + actualDateStr : ''}</div>
+                    <div class="text-sm opacity-90 mb-2">${dayName}${fullDateStr ? ' • ' + fullDateStr : ''}</div>
                     <div class="text-xs font-semibold bg-white/30 px-2 py-1 rounded-full inline-block">
                         ${filled}/2
                     </div>

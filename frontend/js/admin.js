@@ -377,5 +377,6 @@ window.exportToCSV = exportToCSV;
 window.togglePhase2 = togglePhase2;
 window.printTable = printTable;
 window.deleteRegistration = deleteRegistration;
+window.saveSettings = saveSettings;
 
 console.log('Takjil Admin JavaScript loaded');
