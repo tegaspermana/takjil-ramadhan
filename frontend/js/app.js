@@ -1,0 +1,366 @@
+// Takjil Ramadhan - Main Application
+// ====================================
+
+// Configuration
+const API_BASE_URL = window.location.origin;
+const HOUSE_CODES = [
+    // WB Series (48)
+    'WB-01', 'WB-02', 'WB-03', 'WB-04', 'WB-05', 'WB-06', 'WB-07', 'WB-08', 'WB-09', 'WB-10',
+    'WB-11', 'WB-12', 'WB-13', 'WB-14', 'WB-15', 'WB-16', 'WB-17', 'WB-18', 'WB-19', 'WB-20',
+    'WB-21', 'WB-22', 'WB-23', 'WB-24', 'WB-25', 'WB-26', 'WB-27', 'WB-28', 'WB-29', 'WB-30',
+    'WB-31', 'WB-32', 'WB-33', 'WB-34', 'WB-35', 'WB-36', 'WB-37', 'WB-38', 'WB-39', 'WB-40',
+    'WB-41', 'WB-42', 'WB-43', 'WB-44', 'WB-45', 'WB-46', 'WB-47', 'WB-48',
+
+    // PN Series (47)
+    'PN-01', 'PN-02', 'PN-03', 'PN-04', 'PN-05', 'PN-06', 'PN-07', 'PN-08', 'PN-09', 'PN-10',
+    'PN-11', 'PN-12', 'PN-13', 'PN-14', 'PN-15', 'PN-16', 'PN-17', 'PN-18', 'PN-19', 'PN-20',
+    'PN-21', 'PN-22', 'PN-23', 'PN-24', 'PN-25', 'PN-26', 'PN-27', 'PN-28', 'PN-29', 'PN-30',
+    'PN-31', 'PN-32', 'PN-33', 'PN-34', 'PN-35', 'PN-36', 'PN-37', 'PN-38', 'PN-39', 'PN-40',
+    'PN-41', 'PN-42', 'PN-43', 'PN-44', 'PN-45', 'PN-46', 'PN-47',
+
+    // LP Series (16)
+    'LP-01', 'LP-02', 'LP-03', 'LP-04', 'LP-05', 'LP-06', 'LP-07', 'LP-08', 'LP-09', 'LP-10',
+    'LP-11', 'LP-12', 'LP-13', 'LP-14', 'LP-15', 'LP-16',
+
+    // PW Series (14)
+    'PW-01', 'PW-02', 'PW-03', 'PW-04', 'PW-05', 'PW-06', 'PW-07', 'PW-08', 'PW-09', 'PW-10',
+    'PW-11', 'PW-12', 'PW-13', 'PW-14',
+
+    // SL Series (14)
+    'SL-01', 'SL-02', 'SL-03', 'SL-04', 'SL-05', 'SL-06', 'SL-07', 'SL-08', 'SL-09', 'SL-10',
+    'SL-11', 'SL-12', 'SL-13', 'SL-14',
+
+    // LN Series (12)
+    'LN-01', 'LN-02', 'LN-03', 'LN-04', 'LN-05', 'LN-06', 'LN-07', 'LN-08', 'LN-09', 'LN-10',
+    'LN-11', 'LN-12',
+
+    // MB Series (3)
+    'MB-01', 'MB-02', 'MB-03'
+];
+
+// Global State
+let registrations = [];
+let settings = {};
+let selectedDate = null;
+
+// Initialize Application
+document.addEventListener('DOMContentLoaded', function () {
+    console.log('Takjil App Initializing...');
+    initApp();
+});
+
+async function initApp() {
+    try {
+        // Load house codes dropdown
+        populateHouseCodes();
+
+        // Load initial data
+        await loadData();
+
+        // Render UI
+        renderDateGrid();
+        updateStats();
+
+        // Setup event listeners
+        setupEventListeners();
+
+        // Hide loading, show app
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('app').classList.remove('hidden');
+
+        console.log('App initialized successfully');
+
+    } catch (error) {
+        console.error('App initialization error:', error);
+        document.getElementById('loading').innerHTML = `
+            <div class="text-red-600">
+                <i class="fas fa-exclamation-triangle text-4xl mb-4"></i>
+                <p class="text-lg font-semibold">Gagal memuat aplikasi</p>
+                <p class="text-sm mt-2">Silakan refresh halaman</p>
+            </div>
+        `;
+    }
+}
+
+function populateHouseCodes() {
+    const select = document.getElementById('house-code');
+    if (!select) return;
+
+    // Group by prefix for better organization
+    const grouped = HOUSE_CODES.reduce((acc, code) => {
+        const prefix = code.split('-')[0];
+        if (!acc[prefix]) acc[prefix] = [];
+        acc[prefix].push(code);
+        return acc;
+    }, {});
+
+    // Clear existing options
+    select.innerHTML = '<option value="">Pilih Kode Jalan</option>';
+
+    // Add optgroups for each prefix
+    Object.keys(grouped).sort().forEach(prefix => {
+        const optgroup = document.createElement('optgroup');
+        optgroup.label = prefix;
+
+        grouped[prefix].forEach(code => {
+            const option = document.createElement('option');
+            option.value = code;
+            option.textContent = code;
+            optgroup.appendChild(option);
+        });
+
+        select.appendChild(optgroup);
+    });
+}
+
+async function loadData() {
+    try {
+        // Load registrations
+        const regResponse = await fetch(`${API_BASE_URL}/api/registrations`);
+        const regData = await regResponse.json();
+
+        if (regData.success) {
+            registrations = regData.data;
+        }
+
+        // Load settings
+        const settingsResponse = await fetch(`${API_BASE_URL}/api/settings`);
+        const settingsData = await settingsResponse.json();
+
+        if (settingsData.success) {
+            settings = settingsData.data;
+        }
+
+    } catch (error) {
+        console.error('Error loading data:', error);
+        throw error;
+    }
+}
+
+function renderDateGrid() {
+    const grid = document.getElementById('date-grid');
+    if (!grid) return;
+
+    const dayNames = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+    let html = '';
+
+    for (let date = 1; date <= 30; date++) {
+        const dayName = dayNames[(date - 1) % 7];
+        const dateRegs = registrations.filter(r => r.tanggal === date);
+        const filled = dateRegs.length;
+        const available = 2 - filled;
+
+        // Determine status
+        let status = 'available';
+        let statusClass = 'status-available';
+        let isLocked = false;
+
+        if (date > 20 && !settings.phase2_unlocked) {
+            status = 'locked';
+            statusClass = 'status-locked';
+            isLocked = true;
+        } else if (filled === 2) {
+            status = 'full';
+            statusClass = 'status-full';
+        } else if (filled === 1) {
+            status = 'partial';
+            statusClass = 'status-partial';
+        }
+
+        html += `
+            <div class="date-card ${statusClass} rounded-xl p-4 text-white cursor-pointer ${isLocked ? 'opacity-70' : 'hover:shadow-lg'}"
+                 onclick="${!isLocked ? `openRegistrationModal(${date})` : ''}">
+                <div class="text-center">
+                    <div class="font-bold text-xl mb-1">${date}</div>
+                    <div class="text-sm opacity-90 mb-2">${dayName}</div>
+                    <div class="text-xs font-semibold bg-white/30 px-2 py-1 rounded-full inline-block">
+                        ${filled}/2
+                    </div>
+                    <div class="text-xs mt-2">
+                        ${status === 'available' ? 'Tersedia' :
+                status === 'partial' ? '1/2 Terisi' :
+                    status === 'full' ? 'Penuh' : 'Tertutup'}
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    grid.innerHTML = html;
+}
+
+function updateStats() {
+    const total = registrations.length;
+    const percent = Math.round((total / 60) * 100);
+    const uniqueDates = new Set(registrations.map(r => r.tanggal)).size;
+    const availableDates = 30 - uniqueDates;
+
+    document.getElementById('total-registrations').textContent = total;
+    document.getElementById('filled-percentage').textContent = `${percent}%`;
+    document.getElementById('available-dates').textContent = availableDates;
+    document.getElementById('phase-status').textContent = settings.phase2_unlocked ? 'Terbuka' : 'Tertutup';
+    document.getElementById('phase-status').className = `text-2xl font-bold ${settings.phase2_unlocked ? 'text-emerald-600' : 'text-gray-600'}`;
+}
+
+function setupEventListeners() {
+    // Registration form submit
+    const form = document.getElementById('registration-form');
+    if (form) {
+        form.addEventListener('submit', handleFormSubmit);
+    }
+
+    // Admin link click
+    const adminLink = document.querySelector('a[href="/admin"]');
+    if (adminLink) {
+        adminLink.addEventListener('click', function (e) {
+            e.preventDefault();
+            window.open('/admin', '_blank');
+        });
+    }
+}
+
+function openRegistrationModal(date) {
+    selectedDate = date;
+
+    // Get registrations for this date
+    const dateRegs = registrations.filter(r => r.tanggal === date);
+
+    // Update modal
+    document.getElementById('modal-title').textContent = `Daftar Takjil - Tanggal ${date} Ramadhan`;
+    document.getElementById('selected-date').value = date;
+
+    // Show existing registrations
+    const existingContainer = document.querySelector('.existing-registrations');
+    if (existingContainer) existingContainer.remove();
+
+    if (dateRegs.length > 0) {
+        const details = document.createElement('div');
+        details.className = 'existing-registrations mb-4 p-4 bg-gray-50 rounded-lg';
+        details.innerHTML = `
+            <p class="text-sm font-medium text-gray-700 mb-2">Sudah terdaftar:</p>
+            ${dateRegs.map(reg => `
+                <div class="text-sm text-gray-600 mb-1">
+                    <i class="fas fa-home mr-2"></i>
+                    ${reg.kode_jalan} - ${reg.nama_keluarga}
+                </div>
+            `).join('')}
+        `;
+
+        document.getElementById('modal-title').after(details);
+    }
+
+    // Reset form
+    document.getElementById('family-name').value = '';
+    document.getElementById('house-code').value = '';
+    document.getElementById('whatsapp').value = '';
+    document.getElementById('form-error').classList.add('hidden');
+
+    // Show modal
+    document.getElementById('registration-modal').classList.remove('hidden');
+    document.getElementById('registration-modal').classList.add('flex');
+}
+
+function closeModal() {
+    document.getElementById('registration-modal').classList.add('hidden');
+    document.getElementById('registration-modal').classList.remove('flex');
+}
+
+function closeSuccessModal() {
+    document.getElementById('success-modal').classList.add('hidden');
+    document.getElementById('success-modal').classList.remove('flex');
+}
+
+async function handleFormSubmit(e) {
+    e.preventDefault();
+
+    const familyName = document.getElementById('family-name').value.trim();
+    const houseCode = document.getElementById('house-code').value;
+    const whatsapp = document.getElementById('whatsapp').value.trim();
+    const date = parseInt(document.getElementById('selected-date').value);
+    const errorDiv = document.getElementById('form-error');
+
+    // Validation
+    if (!familyName || !houseCode || !whatsapp) {
+        showError('Semua field harus diisi');
+        return;
+    }
+
+    const whatsappClean = whatsapp.replace(/\D/g, '');
+    if (!/^08[0-9]{9,}$/.test(whatsappClean)) {
+        showError('Nomor WhatsApp tidak valid. Harus diawali 08 dan minimal 10 digit');
+        return;
+    }
+
+    // Format WhatsApp number
+    const formattedWhatsApp = '62' + whatsappClean.substring(1);
+
+    // Show loading state
+    const submitBtn = document.getElementById('submit-btn');
+    const submitText = document.getElementById('submit-text');
+    const submitLoading = document.getElementById('submit-loading');
+
+    submitText.classList.add('hidden');
+    submitLoading.classList.remove('hidden');
+    submitBtn.disabled = true;
+    errorDiv.classList.add('hidden');
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/registrations`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                tanggal: date,
+                kode_jalan: houseCode,
+                nama_keluarga: familyName,
+                whatsapp: formattedWhatsApp
+            })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            // Reload data
+            await loadData();
+
+            // Update UI
+            renderDateGrid();
+            updateStats();
+
+            // Show success message
+            document.getElementById('success-message').innerHTML = `
+                Terima kasih <strong>${familyName}</strong>!<br>
+                Pendaftaran untuk tanggal ${date} Ramadhan berhasil.
+            `;
+            closeModal();
+            document.getElementById('success-modal').classList.remove('hidden');
+            document.getElementById('success-modal').classList.add('flex');
+
+        } else {
+            showError(data.error || 'Gagal menyimpan data');
+        }
+
+    } catch (error) {
+        console.error('Submit error:', error);
+        showError('Koneksi error. Silakan coba lagi.');
+    } finally {
+        // Reset button state
+        submitText.classList.remove('hidden');
+        submitLoading.classList.add('hidden');
+        submitBtn.disabled = false;
+    }
+}
+
+function showError(message) {
+    const errorDiv = document.getElementById('form-error');
+    errorDiv.textContent = message;
+    errorDiv.classList.remove('hidden');
+}
+
+// Expose functions to global scope
+window.openRegistrationModal = openRegistrationModal;
+window.closeModal = closeModal;
+window.closeSuccessModal = closeSuccessModal;
+
+console.log('Takjil App JavaScript loaded');
