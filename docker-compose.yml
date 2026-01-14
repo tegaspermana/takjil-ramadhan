@@ -9,7 +9,7 @@ services:
       - ./backups:/app/backups
     environment:
       - NODE_ENV=production
-      - PORT=3000
+      - PORT=3001
       - DB_PATH=/app/database/takjil.db
       - ADMIN_PASSWORD=takjil2026
     restart: unless-stopped

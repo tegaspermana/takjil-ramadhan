@@ -2,6 +2,7 @@
   "name": "takjil-backend",
   "version": "1.0.0",
   "description": "Backend server for Takjil Ramadhan Registration",
+  "type": "module",
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
