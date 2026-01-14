@@ -1,0 +1,25 @@
+services:
+  takjil-app:
+    build: ./backend
+    container_name: takjil-ramadhan
+    ports:
+      - '8181:3001' # Host:Container
+    volumes:
+      - takjil-data:/app/database
+      - ./backups:/app/backups
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DB_PATH=/app/database/takjil.db
+      - ADMIN_PASSWORD=takjil2026
+    restart: unless-stopped
+    networks:
+      - takjil-network
+
+volumes:
+  takjil-data:
+    driver: local
+
+networks:
+  takjil-network:
+    driver: bridge

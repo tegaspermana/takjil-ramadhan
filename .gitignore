@@ -12,14 +12,14 @@ yarn-error.log*
 .env.production.local
 
 # Database
-*.db
-*.sqlite
-*.sqlite3
+#*.db
+#*.sqlite
+#*.sqlite3
 
 # Docker
-.dockerignore
-Dockerfile
-docker-compose.yml
+#.dockerignore
+#Dockerfile
+#docker-compose.yml
 
 # Runtime data
 data/

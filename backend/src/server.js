@@ -10,7 +10,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 // Initialize Express app
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3001;
 const DB_PATH = process.env.DB_PATH || join(__dirname, '..', '..', 'database', 'takjil.db');
 
 // Ensure database directory exists
