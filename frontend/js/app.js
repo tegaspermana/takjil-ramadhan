@@ -188,7 +188,7 @@ function renderDateGrid() {
                 const dateObj = new Date(base);
                 dateObj.setDate(base.getDate() + (date - 1));
                 dayName = dateObj.toLocaleDateString('id-ID', { weekday: 'long' });
-                fullDateStr = dateObj.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+                fullDateStr = dateObj.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
             } catch (err) {
                 // keep defaults
             }
