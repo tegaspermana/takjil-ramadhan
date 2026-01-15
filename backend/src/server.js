@@ -357,23 +357,46 @@ app.post('/api/admin/login', (req, res) => {
 // Export to CSV
 app.get('/api/export/csv', (req, res) => {
     try {
+        // Get settings for start_date
+        const settingsStmt = db.prepare('SELECT start_date FROM settings WHERE id = 1');
+        const settings = settingsStmt.get();
+
+        // Get all registrations
         const stmt = db.prepare(`
-            SELECT tanggal, kode_jalan, nama_keluarga, whatsapp, 
-                   DATE(created_at) as tanggal_daftar
+            SELECT tanggal, kode_jalan, nama_keluarga, whatsapp
             FROM registrations 
             ORDER BY tanggal, created_at
         `);
 
         const registrations = stmt.all();
 
+        // Function to calculate actual date
+        function calculateActualDate(ramadhanDate, startDate) {
+            if (!startDate) return '';
+            try {
+                const base = new Date(startDate + 'T00:00:00');
+                const actualDate = new Date(base);
+                actualDate.setDate(base.getDate() + (ramadhanDate - 1));
+
+                // Format as mm/dd/yyyy
+                const month = (actualDate.getMonth() + 1).toString().padStart(2, '0');
+                const day = actualDate.getDate().toString().padStart(2, '0');
+                const year = actualDate.getFullYear();
+
+                return `${month}/${day}/${year}`;
+            } catch (error) {
+                return '';
+            }
+        }
+
         // Convert to CSV
-        const headers = ['Tanggal', 'Kode Jalan', 'Nama Keluarga', 'WhatsApp', 'Tanggal Daftar'];
+        const headers = ['Actual Date (mm/dd/yyyy)', 'Ramadhan Date', 'Nama Keluarga', 'Kode Jalan', 'Nomor WhatsApp'];
         const csvRows = registrations.map(reg => [
+            calculateActualDate(reg.tanggal, settings?.start_date),
             reg.tanggal,
-            reg.kode_jalan,
             `"${reg.nama_keluarga}"`,
-            reg.whatsapp,
-            reg.tanggal_daftar
+            reg.kode_jalan,
+            reg.whatsapp
         ]);
 
         const csv = [headers.join(','), ...csvRows.map(row => row.join(','))].join('\n');
