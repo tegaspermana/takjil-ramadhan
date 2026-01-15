@@ -41,7 +41,7 @@ const HOUSE_CODES = [
 
     // ML Series (12)
     'ML-01', 'ML-02', 'ML-03', 'ML-05', 'ML-06', 'ML-07', 'ML-08', 'ML-09', 'ML-10',
-    'ML-11', 'ML-12', 'ML-14'
+    'ML-11', 'ML-12', 'ML-14',
 
     //Lainnya
     'Lainnya'
