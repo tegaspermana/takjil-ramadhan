@@ -108,6 +108,7 @@ app.post('/api/registrations', (req, res) => {
         const body = req.body;
         const isArray = Array.isArray(body);
         const registrations = isArray ? body : [body];
+        const results = [];
 
         // Validate each registration
         for (const reg of registrations) {
@@ -163,20 +164,22 @@ app.post('/api/registrations', (req, res) => {
             });
         }
 
-        const result = insertStmt.run(dateNum, reg.kode_jalan, reg.nama_keluarga, reg.whatsapp);
-        results.push(result.lastInsertRowid);
-    }
+        // Insert each registration
+        for (const reg of registrations) {
+            const result = insertStmt.run(dateNum, reg.kode_jalan, reg.nama_keluarga, reg.whatsapp);
+            results.push(result.lastInsertRowid);
+        }
 
         res.json({
-        success: true,
-        message: `Pendaftaran berhasil${isArray ? ` (${registrations.length} slot)` : ''}`,
-        ids: results
-    });
+            success: true,
+            message: `Pendaftaran berhasil${isArray ? ` (${registrations.length} slot)` : ''}`,
+            ids: results
+        });
 
-} catch (error) {
-    console.error('Error adding registration:', error);
-    res.status(500).json({ success: false, error: 'Internal server error' });
-}
+    } catch (error) {
+        console.error('Error adding registration:', error);
+        res.status(500).json({ success: false, error: 'Internal server error' });
+    }
 });
 
 // Delete registration
