@@ -325,11 +325,14 @@ function renderUserDateTable() {
         }
 
         const canClick = !isLocked && filled < 2;
-        const rowClass = canClick ? 'hover:bg-gray-50 cursor-pointer' : '';
-        const clickHandler = canClick ? `onclick="openRegistrationModal(${date})"` : '';
+        const buttonHtml = canClick
+            ? `<button onclick="openRegistrationModal(${date})" class="px-3 py-1 bg-emerald-600 text-white text-sm rounded hover:bg-emerald-700 transition">
+                Daftar
+               </button>`
+            : '<span class="text-gray-400 text-sm">-</span>';
 
         html += `
-            <tr class="${rowClass}" ${clickHandler}>
+            <tr class="hover:bg-gray-50">
                 <td class="px-4 py-3 whitespace-nowrap">
                     <div class="font-medium text-gray-900">${date} Ramadhan</div>
                     ${fullDateStr ? `<div class="text-sm text-gray-500">${fullDateStr}</div>` : ''}
@@ -347,6 +350,9 @@ function renderUserDateTable() {
                 </td>
                 <td class="px-4 py-3 text-sm text-gray-900">
                     ${registrantsHtml}
+                </td>
+                <td class="px-4 py-3 whitespace-nowrap">
+                    ${buttonHtml}
                 </td>
             </tr>
         `;
