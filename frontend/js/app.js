@@ -56,7 +56,6 @@ async function initApp() {
 
         // Initialize richer autocomplete for Kode Jalan
         initHouseAutocomplete();
-        initHouseAutocomplete2();
 
         // Load initial data
         await loadData();
@@ -106,8 +105,6 @@ async function initApp() {
 function populateHouseCodes() {
     const input = document.getElementById('house-code');
     const datalist = document.getElementById('house-code-list');
-    const input2 = document.getElementById('house-code-2');
-    const datalist2 = document.getElementById('house-code-list-2');
     if (!input) return;
 
     if (datalist) {
@@ -126,16 +123,6 @@ function populateHouseCodes() {
             option.value = code;
             option.textContent = code;
             select.appendChild(option);
-        });
-    }
-
-    // Populate second datalist
-    if (datalist2) {
-        datalist2.innerHTML = '';
-        HOUSE_CODES.forEach(code => {
-            const opt = document.createElement('option');
-            opt.value = code;
-            datalist2.appendChild(opt);
         });
     }
 }
@@ -256,22 +243,6 @@ function setupEventListeners() {
         form.addEventListener('submit', handleFormSubmit);
     }
 
-    // All slots checkbox
-    const allSlotsCheckbox = document.getElementById('all-slots-checkbox');
-    if (allSlotsCheckbox) {
-        allSlotsCheckbox.addEventListener('change', function () {
-            const secondContainer = document.getElementById('second-house-code-container');
-            if (this.checked) {
-                secondContainer.classList.add('hidden');
-                document.getElementById('house-code-2').required = false;
-                document.getElementById('house-code-2').value = '';
-            } else {
-                secondContainer.classList.remove('hidden');
-                document.getElementById('house-code-2').required = true;
-            }
-        });
-    }
-
     // Admin link click
     const adminLink = document.querySelector('a[href="/admin"]');
     if (adminLink) {
@@ -287,7 +258,6 @@ function openRegistrationModal(date) {
 
     // Get registrations for this date
     const dateRegs = registrations.filter(r => r.tanggal === date);
-    const available = 2 - dateRegs.length;
 
     // Update modal
     document.getElementById('modal-title').textContent = `Daftar Takjil - Tanggal ${date} Ramadhan`;
@@ -313,26 +283,11 @@ function openRegistrationModal(date) {
         document.getElementById('modal-title').after(details);
     }
 
-    // Show/hide "Pilih semua slot" checkbox
-    const allSlotsContainer = document.getElementById('all-slots-container');
-    const allSlotsCheckbox = document.getElementById('all-slots-checkbox');
-    if (available === 2) {
-        allSlotsContainer.classList.remove('hidden');
-        allSlotsCheckbox.checked = false;
-    } else {
-        allSlotsContainer.classList.add('hidden');
-        allSlotsCheckbox.checked = false;
-    }
-
     // Reset form
     document.getElementById('family-name').value = '';
     document.getElementById('house-code').value = '';
-    document.getElementById('house-code-2').value = '';
     document.getElementById('whatsapp').value = '';
     document.getElementById('form-error').classList.add('hidden');
-
-    // Hide second kode jalan initially
-    document.getElementById('second-house-code-container').classList.add('hidden');
 
     // Show modal
     document.getElementById('registration-modal').classList.remove('hidden');
@@ -366,7 +321,6 @@ async function handleFormSubmit(e) {
     const houseCode = document.getElementById('house-code').value;
     const whatsapp = document.getElementById('whatsapp').value.trim();
     const date = parseInt(document.getElementById('selected-date').value);
-    const allSlotsChecked = document.getElementById('all-slots-checkbox').checked;
     const errorDiv = document.getElementById('form-error');
 
     // Validation
@@ -380,9 +334,6 @@ async function handleFormSubmit(e) {
         showError('Kode Jalan tidak valid. Pilih dari daftar.');
         return;
     }
-
-    // If all slots checked, no need for second kode jalan validation since data is same
-    // Just ensure the first is valid
 
     const whatsappClean = whatsapp.replace(/\D/g, '');
     if (!/^08[0-9]{9,}$/.test(whatsappClean)) {
@@ -404,29 +355,17 @@ async function handleFormSubmit(e) {
     errorDiv.classList.add('hidden');
 
     try {
-        // Prepare registration data
-        const registrations = [{
-            tanggal: date,
-            kode_jalan: houseCode,
-            nama_keluarga: familyName,
-            whatsapp: formattedWhatsApp
-        }];
-
-        if (allSlotsChecked) {
-            registrations.push({
-                tanggal: date,
-                kode_jalan: houseCode,
-                nama_keluarga: familyName,
-                whatsapp: formattedWhatsApp
-            });
-        }
-
         const response = await fetch(`${API_BASE_URL}/api/registrations`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify(registrations.length === 1 ? registrations[0] : registrations)
+            body: JSON.stringify({
+                tanggal: date,
+                kode_jalan: houseCode,
+                nama_keluarga: familyName,
+                whatsapp: formattedWhatsApp
+            })
         });
 
         const data = await response.json();
@@ -440,10 +379,9 @@ async function handleFormSubmit(e) {
             updateStats();
 
             // Show success message
-            const slotText = allSlotsChecked ? ' (2 slot)' : '';
             document.getElementById('success-message').innerHTML = `
                 Terima kasih <strong>${familyName}</strong>!<br>
-                Pendaftaran untuk tanggal ${date} Ramadhan berhasil${slotText}.
+                Pendaftaran untuk tanggal ${date} Ramadhan berhasil.
             `;
             closeModal();
             document.getElementById('success-modal').classList.remove('hidden');
@@ -470,10 +408,10 @@ function showError(message) {
     errorDiv.classList.remove('hidden');
 }
 
-// Initialize richer autocomplete for house codes (second input)
-function initHouseAutocomplete2() {
-    const input = document.getElementById('house-code-2');
-    const suggestions = document.getElementById('house-suggestions-2');
+// Initialize richer autocomplete for house codes
+function initHouseAutocomplete() {
+    const input = document.getElementById('house-code');
+    const suggestions = document.getElementById('house-suggestions');
     if (!input || !suggestions) return;
 
     let items = [];
@@ -571,106 +509,6 @@ function initHouseAutocomplete2() {
         items = list;
         render(list);
     });
-}
-const input = document.getElementById('house-code');
-const suggestions = document.getElementById('house-suggestions');
-if (!input || !suggestions) return;
-
-let items = [];
-let selected = -1;
-
-function render(list) {
-    suggestions.innerHTML = '';
-    if (!list.length) {
-        suggestions.classList.add('hidden');
-        input.setAttribute('aria-expanded', 'false');
-        return;
-    }
-
-    list.forEach((code, idx) => {
-        const div = document.createElement('div');
-        div.className = 'px-3 py-2 cursor-pointer hover:bg-gray-100';
-        div.setAttribute('role', 'option');
-        div.textContent = code;
-        div.addEventListener('mousedown', (e) => {
-            // use mousedown to select before blur
-            e.preventDefault();
-            select(idx);
-            choose();
-        });
-        suggestions.appendChild(div);
-    });
-    suggestions.classList.remove('hidden');
-    input.setAttribute('aria-expanded', 'true');
-}
-
-function filter(val) {
-    const q = val.trim().toLowerCase();
-    if (!q) return HOUSE_CODES.slice(0, 10);
-    return HOUSE_CODES.filter(c => c.toLowerCase().includes(q)).slice(0, 10);
-}
-
-function select(idx) {
-    const children = suggestions.children;
-    if (selected >= 0 && children[selected]) children[selected].classList.remove('bg-gray-100');
-    selected = idx;
-    if (selected >= 0 && children[selected]) children[selected].classList.add('bg-gray-100');
-}
-
-function choose() {
-    if (selected >= 0 && suggestions.children[selected]) {
-        input.value = suggestions.children[selected].textContent;
-    }
-    hide();
-}
-
-function hide() {
-    suggestions.classList.add('hidden');
-    input.setAttribute('aria-expanded', 'false');
-    selected = -1;
-}
-
-input.addEventListener('input', (e) => {
-    const list = filter(e.target.value);
-    items = list;
-    selected = -1;
-    render(list);
-});
-
-input.addEventListener('keydown', (e) => {
-    const children = suggestions.children;
-    if (e.key === 'ArrowDown') {
-        e.preventDefault();
-        if (selected < children.length - 1) select(selected + 1);
-        else if (children.length) select(0);
-    } else if (e.key === 'ArrowUp') {
-        e.preventDefault();
-        if (selected > 0) select(selected - 1);
-        else if (children.length) select(children.length - 1);
-    } else if (e.key === 'Enter') {
-        if (selected >= 0) {
-            e.preventDefault();
-            choose();
-        }
-    } else if (e.key === 'Escape') {
-        hide();
-    }
-});
-
-// Hide on blur (allow click selection via mousedown)
-input.addEventListener('blur', () => setTimeout(hide, 150));
-
-// Clicking outside should hide
-document.addEventListener('click', (e) => {
-    if (!input.contains(e.target) && !suggestions.contains(e.target)) hide();
-});
-
-// Pre-populate suggestions on focus
-input.addEventListener('focus', (e) => {
-    const list = filter(e.target.value);
-    items = list;
-    render(list);
-});
 }
 
 // Expose functions to global scope
