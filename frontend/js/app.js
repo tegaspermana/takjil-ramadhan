@@ -218,10 +218,7 @@ function renderDateGrid() {
                     <div class="font-bold text-xl mb-1">${date}</div>
                     <div class="text-sm opacity-90 mb-2">${dayName}${fullDateStr ? ' • ' + fullDateStr : ''}</div>
                     <div class="text-xs font-semibold bg-white/30 px-2 py-1 rounded-full inline-block">
-                        ${filled}/2
-                    </div>
-                    <div class="text-xs mt-2">
-                        ${status === 'available' ? 'Tersedia' :
+                         ${status === 'available' ? 'Tersedia' :
                 status === 'partial' ? '1/2 Terisi' :
                     status === 'full' ? 'Penuh' : 'Tertutup'}
                     </div>
