@@ -453,7 +453,7 @@ async function openRegistrationModal(date) {
             if (existingContainer) existingContainer.remove();
 
             // Show updated existing registrations
-            if (updatedDateRegs.length > 0) {
+            if (updatedDateRegs.length > 0 && updatedDateRegs.length < 2) {
                 const details = document.createElement('div');
                 details.className = 'existing-registrations mb-4 p-4 bg-gray-50 rounded-lg';
                 details.innerHTML = `
