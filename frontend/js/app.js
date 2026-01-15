@@ -274,8 +274,13 @@ async function openRegistrationModal(date) {
     try {
         await loadData();
 
+        // Update the grid with fresh data
+        renderDateGrid();
+        updateStats();
+
         // Update existing registrations display with fresh data
         const dateRegs = registrations.filter(r => r.tanggal === date);
+        console.log(`Loaded ${dateRegs.length} registrations for date ${date}`);
 
         // Remove existing registrations display
         const existingContainer = document.querySelector('.existing-registrations');
