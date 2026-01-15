@@ -7,108 +7,14 @@ const ITEMS_PER_PAGE = 10;
 
 // Available house codes (same source as frontend)
 const HOUSE_CODES = [
-    // WB Series - Wirobrajan
-    'WB-01', 'WB-02', 'WB-03', 'WB-05', 'WB-06', 'WB-07', 'WB-08', 'WB-09', 'WB-10',
-    'WB-11', 'WB-12', 'WB-14', 'WB-15', 'WB-16', 'WB-17', 'WB-18', 'WB-19', 'WB-20',
-    'WB-21', 'WB-22', 'WB-23', 'WB-24', 'WB-25', 'WB-26', 'WB-27', 'WB-28', 'WB-29', 'WB-30',
-    'WB-31', 'WB-32', 'WB-33', 'WB-34', 'WB-35', 'WB-36', 'WB-37', 'WB-38', 'WB-39', 'WB-40',
-    'WB-41', 'WB-42', 'WB-43', 'WB-45', 'WB-46', 'WB-47', 'WB-48',
-
-    // PN Series - Panembahan
-    'PN-01', 'PN-02', 'PN-03', 'PN-05', 'PN-06', 'PN-07', 'PN-08', 'PN-09', 'PN-10',
-    'PN-11', 'PN-12', 'PN-14', 'PN-15', 'PN-16', 'PN-17', 'PN-18', 'PN-19', 'PN-20',
-    'PN-21', 'PN-22', 'PN-23', 'PN-24', 'PN-25', 'PN-26', 'PN-27', 'PN-28', 'PN-29', 'PN-30',
-    'PN-31', 'PN-32', 'PN-33', 'PN-34', 'PN-35', 'PN-36', 'PN-37', 'PN-38', 'PN-39',
-    'PN-41', 'PN-43', 'PN-45', 'PN-47',
-
-    // MB Series - Mangkubumi
-    'MB-01', 'MB-02', 'MB-03',
-
-    // LP Series - Lempuyangan
-    'LP-01', 'LP-02', 'LP-03', 'LP-05', 'LP-06', 'LP-07', 'LP-08', 'LP-09', 'LP-10',
-    'LP-11', 'LP-12', 'LP-14', 'LP-16',
-
-    // PW Series - Prawirotaman
-    'PW-01', 'PW-02', 'PW-03', 'PW-05', 'PW-06', 'PW-07', 'PW-08', 'PW-09', 'PW-10',
-    'PW-11', 'PW-12', 'PW-14',
-
-    // SL Series - Siliran
-    'SL-01', 'SL-02', 'SL-03', 'SL-05', 'SL-06', 'SL-07', 'SL-08', 'SL-09', 'SL-10',
-    'SL-12', 'SL-14',
-
-    // LS Series - Langensari
-    'LS-01', 'LS-02', 'LS-03', 'LS-05', 'LS-06', 'LS-07', 'LS-08', 'LS-10', 'LS-12',
-
-    // RW Series - Rotowijayan
-    'RW-03', 'RW-05', 'RW-07', 'RW-09',
-
-    // ML Series - Malioboro
-    'ML-01', 'ML-02', 'ML-03', 'ML-05', 'ML-06', 'ML-07', 'ML-08', 'ML-09', 'ML-10',
-    'ML-11', 'ML-12', 'ML-14'
+    'WB-01', 'WB-02', 'WB-03', 'WB-04', 'WB-05', 'WB-06', 'WB-07', 'WB-08', 'WB-09', 'WB-10', 'WB-11', 'WB-12', 'WB-13', 'WB-14', 'WB-15', 'WB-16', 'WB-17', 'WB-18', 'WB-19', 'WB-20', 'WB-21', 'WB-22', 'WB-23', 'WB-24', 'WB-25', 'WB-26', 'WB-27', 'WB-28', 'WB-29', 'WB-30', 'WB-31', 'WB-32', 'WB-33', 'WB-34', 'WB-35', 'WB-36', 'WB-37', 'WB-38', 'WB-39', 'WB-40', 'WB-41', 'WB-42', 'WB-43', 'WB-44', 'WB-45', 'WB-46', 'WB-47', 'WB-48',
+    'PN-01', 'PN-02', 'PN-03', 'PN-04', 'PN-05', 'PN-06', 'PN-07', 'PN-08', 'PN-09', 'PN-10', 'PN-11', 'PN-12', 'PN-13', 'PN-14', 'PN-15', 'PN-16', 'PN-17', 'PN-18', 'PN-19', 'PN-20', 'PN-21', 'PN-22', 'PN-23', 'PN-24', 'PN-25', 'PN-26', 'PN-27', 'PN-28', 'PN-29', 'PN-30', 'PN-31', 'PN-32', 'PN-33', 'PN-34', 'PN-35', 'PN-36', 'PN-37', 'PN-38', 'PN-39', 'PN-40', 'PN-41', 'PN-42', 'PN-43', 'PN-44', 'PN-45', 'PN-46', 'PN-47',
+    'LP-01', 'LP-02', 'LP-03', 'LP-04', 'LP-05', 'LP-06', 'LP-07', 'LP-08', 'LP-09', 'LP-10', 'LP-11', 'LP-12', 'LP-13', 'LP-14', 'LP-15', 'LP-16',
+    'PW-01', 'PW-02', 'PW-03', 'PW-04', 'PW-05', 'PW-06', 'PW-07', 'PW-08', 'PW-09', 'PW-10', 'PW-11', 'PW-12', 'PW-13', 'PW-14',
+    'SL-01', 'SL-02', 'SL-03', 'SL-04', 'SL-05', 'SL-06', 'SL-07', 'SL-08', 'SL-09', 'SL-10', 'SL-11', 'SL-12', 'SL-13', 'SL-14',
+    'LN-01', 'LN-02', 'LN-03', 'LN-04', 'LN-05', 'LN-06', 'LN-07', 'LN-08', 'LN-09', 'LN-10', 'LN-11', 'LN-12',
+    'MB-01', 'MB-02', 'MB-03'
 ];
-
-// House code search mapping for flexible search
-const HOUSE_CODE_MAPPING = {
-    // Wirobrajan
-    'wirobrajan': 'WB', 'wb': 'WB',
-    // Panembahan  
-    'panembahan': 'PN', 'pn': 'PN',
-    // Mangkubumi
-    'mangkubumi': 'MB', 'mb': 'MB',
-    // Lempuyangan
-    'lempuyangan': 'LP', 'lp': 'LP',
-    // Prawirotaman
-    'prawirotaman': 'PW', 'pw': 'PW',
-    // Siliran
-    'siliran': 'SL', 'sl': 'SL',
-    // Langensari
-    'langensari': 'LS', 'ls': 'LS',
-    // Rotowijayan
-    'rotowijayan': 'RW', 'rw': 'RW',
-    // Malioboro
-    'malioboro': 'ML', 'ml': 'ML'
-};
-
-// Function to normalize house code input to proper format
-function normalizeHouseCode(input) {
-    if (!input || typeof input !== 'string') return '';
-
-    const cleanInput = input.trim().toLowerCase();
-
-    // If it's already a valid code, return it
-    if (HOUSE_CODES.includes(cleanInput.toUpperCase())) {
-        return cleanInput.toUpperCase();
-    }
-
-    // Try to parse area name and number
-    for (const [areaName, prefix] of Object.entries(HOUSE_CODE_MAPPING)) {
-        if (cleanInput.includes(areaName)) {
-            // Extract number from the input
-            const numberMatch = cleanInput.match(/\d+/);
-            if (numberMatch) {
-                const number = numberMatch[0].padStart(2, '0');
-                const code = `${prefix}-${number}`;
-                if (HOUSE_CODES.includes(code)) {
-                    return code;
-                }
-            }
-        }
-    }
-
-    // Try direct prefix + number format (like "pn-14", "wb 01")
-    const prefixMatch = cleanInput.match(/^([a-z]{2})[-\s]?(\d+)$/i);
-    if (prefixMatch) {
-        const prefix = prefixMatch[1].toUpperCase();
-        const number = prefixMatch[2].padStart(2, '0');
-        const code = `${prefix}-${number}`;
-        if (HOUSE_CODES.includes(code)) {
-            return code;
-        }
-    }
-
-    // If no match found, try to uppercase and check again
-    return cleanInput.toUpperCase();
-}
 
 // Global State
 let registrations = [];
@@ -506,7 +412,7 @@ if (editForm) {
         e.preventDefault();
         const id = parseInt(document.getElementById('edit-id').value);
         const tanggal = parseInt(document.getElementById('edit-tanggal').value);
-        const kode_jalan = normalizeHouseCode(document.getElementById('edit-house-code').value);
+        const kode_jalan = document.getElementById('edit-house-code').value.trim().toUpperCase();
         document.getElementById('edit-house-code').value = kode_jalan;
         const nama_keluarga = document.getElementById('edit-family-name').value.trim();
         const whatsapp = document.getElementById('edit-whatsapp').value.trim();
@@ -597,34 +503,7 @@ function initEditHouseAutocomplete() {
     function filter(val) {
         const q = val.trim().toLowerCase();
         if (!q) return HOUSE_CODES.slice(0, 10);
-
-        const matches = new Set();
-
-        // Add exact code matches
-        HOUSE_CODES.filter(c => c.toLowerCase().includes(q)).forEach(code => matches.add(code));
-
-        // Add matches based on area names and abbreviations
-        for (const [areaName, prefix] of Object.entries(HOUSE_CODE_MAPPING)) {
-            if (areaName.includes(q)) {
-                // If searching for an area name, show all codes in that area
-                HOUSE_CODES.filter(c => c.startsWith(prefix)).forEach(code => matches.add(code));
-            }
-        }
-
-        // Add matches for prefix + number combinations
-        const prefixMatch = q.match(/^([a-z]{2})[-\s]?(\d*)$/i);
-        if (prefixMatch) {
-            const prefix = prefixMatch[1].toUpperCase();
-            const numberPart = prefixMatch[2];
-            HOUSE_CODES.filter(c => {
-                if (!c.startsWith(prefix)) return false;
-                if (!numberPart) return true; // Show all codes for this prefix
-                return c.includes(numberPart);
-            }).forEach(code => matches.add(code));
-        }
-
-        // Convert to array and limit results
-        return Array.from(matches).slice(0, 10);
+        return HOUSE_CODES.filter(c => c.toLowerCase().includes(q)).slice(0, 10);
     }
 
     function hide() {
