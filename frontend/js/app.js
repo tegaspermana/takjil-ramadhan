@@ -72,7 +72,6 @@ async function initApp() {
 
         // Render UI
         renderUserDateOverview();
-        updateStats();
 
         // Setup event listeners
         setupEventListeners();
@@ -212,12 +211,13 @@ function renderDateGrid() {
         }
 
         html += `
-            <div class="date-card ${statusClass} rounded-xl p-4 text-white cursor-pointer ${isLocked ? 'opacity-70' : 'hover:shadow-lg'}"
+            <div class="date-card ${statusClass} rounded-lg md:rounded-xl p-2 md:p-4 text-white cursor-pointer ${isLocked ? 'opacity-70' : 'hover:shadow-lg'}"
                  onclick="${!isLocked ? `openRegistrationModal(${date})` : ''}">
                 <div class="text-center">
-                    <div class="font-bold text-xl mb-1">${date}</div>
-                    <div class="text-sm opacity-90 mb-2">${dayName}${fullDateStr ? ' • ' + fullDateStr : ''}</div>
-                    <div class="text-xs font-semibold bg-white/30 px-2 py-1 rounded-full inline-block">
+                    <div class="font-bold text-lg md:text-xl mb-1">${date}</div>
+                    <div class="text-xs md:text-sm opacity-90 mb-1 md:mb-2">${dayName}</div>
+                    ${fullDateStr ? `<div class="text-xs opacity-75 hidden sm:block">${fullDateStr}</div>` : ''}
+                    <div class="text-xs mt-1 md:mt-2">
                          ${status === 'available' ? 'Tersedia' :
                 status === 'partial' ? '1/2 Terisi' :
                     status === 'full' ? 'Penuh' : 'Tertutup'}
@@ -230,18 +230,6 @@ function renderDateGrid() {
     grid.innerHTML = html;
 }
 
-function updateStats() {
-    const total = registrations.length;
-    const percent = Math.round((total / 60) * 100);
-    const uniqueDates = new Set(registrations.map(r => r.tanggal)).size;
-    const availableDates = 30 - uniqueDates;
-
-    document.getElementById('total-registrations').textContent = total;
-    document.getElementById('filled-percentage').textContent = `${percent}%`;
-    document.getElementById('available-dates').textContent = availableDates;
-    document.getElementById('phase-status').textContent = settings.phase2_unlocked ? 'Terbuka' : 'Tertutup';
-    document.getElementById('phase-status').className = `text-2xl font-bold ${settings.phase2_unlocked ? 'text-emerald-600' : 'text-gray-600'}`;
-}
 
 // User Date View Functions
 function setUserDateView(view) {
@@ -458,7 +446,6 @@ async function openRegistrationModal(date) {
 
             // Update the grid with fresh data
             renderUserDateOverview();
-            updateStats();
 
             // Update existing registrations display with fresh data for THIS date
             const updatedDateRegs = registrations.filter(r => r.tanggal === date);
@@ -509,7 +496,7 @@ function closeModal(refresh = false) {
     if (refresh) {
         loadData().then(() => {
             renderUserDateOverview();
-            updateStats();
+
         }).catch(err => {
             console.error('Error refreshing data:', err);
         });
@@ -587,7 +574,6 @@ async function handleFormSubmit(e) {
 
             // Update UI
             renderUserDateOverview();
-            updateStats();
 
             // Show success message
             document.getElementById('success-message').innerHTML = `

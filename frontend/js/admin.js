@@ -678,15 +678,12 @@ function renderDateGrid() {
         }
 
         html += `
-            <div class="date-card ${statusClass} rounded-lg p-3 text-white text-center ${isLocked ? 'opacity-70' : ''}">
-                <div class="font-bold text-lg mb-1">${date}</div>
-                <div class="text-xs opacity-90 mb-1">${dayName}</div>
-                <div class="text-xs font-semibold bg-white/20 px-2 py-1 rounded">
-                    ${filled}/2
-                </div>
+            <div class="date-card ${statusClass} rounded-lg p-2 md:p-3 text-white text-center ${isLocked ? 'opacity-70' : ''}">
+                <div class="font-bold text-base md:text-lg mb-1">${date}</div>
+                <div class="text-xs opacity-90">${dayName}</div>
                 <div class="text-xs mt-1">
                     ${status === 'available' ? 'Tersedia' :
-                status === 'partial' ? '1/2 Terisi' :
+                status === 'partial' ? 'Terisi' :
                     status === 'full' ? 'Penuh' : 'Tertutup'}
                 </div>
             </div>
