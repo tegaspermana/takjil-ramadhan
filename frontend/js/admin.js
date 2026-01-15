@@ -409,7 +409,8 @@ if (editForm) {
         e.preventDefault();
         const id = parseInt(document.getElementById('edit-id').value);
         const tanggal = parseInt(document.getElementById('edit-tanggal').value);
-        const kode_jalan = document.getElementById('edit-house-code').value.trim();
+        const kode_jalan = document.getElementById('edit-house-code').value.trim().toUpperCase();
+        document.getElementById('edit-house-code').value = kode_jalan;
         const nama_keluarga = document.getElementById('edit-family-name').value.trim();
         const whatsapp = document.getElementById('edit-whatsapp').value.trim();
         const errorDiv = document.getElementById('edit-error');

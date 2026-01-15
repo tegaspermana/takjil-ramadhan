@@ -334,10 +334,14 @@ async function handleFormSubmit(e) {
     e.preventDefault();
 
     const familyName = document.getElementById('family-name').value.trim();
-    const houseCode = document.getElementById('house-code').value;
+    let houseCode = document.getElementById('house-code').value;
     const whatsapp = document.getElementById('whatsapp').value.trim();
     const date = parseInt(document.getElementById('selected-date').value);
     const errorDiv = document.getElementById('form-error');
+
+    // Normalize house code to uppercase for case-insensitive validation
+    houseCode = houseCode.toUpperCase();
+    document.getElementById('house-code').value = houseCode;
 
     // Validation
     if (!familyName || !houseCode || !whatsapp) {
