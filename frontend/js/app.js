@@ -4,38 +4,44 @@
 // Configuration
 const API_BASE_URL = window.location.origin;
 const HOUSE_CODES = [
-    // WB Series (48)
-    'WB-01', 'WB-02', 'WB-03', 'WB-04', 'WB-05', 'WB-06', 'WB-07', 'WB-08', 'WB-09', 'WB-10',
-    'WB-11', 'WB-12', 'WB-13', 'WB-14', 'WB-15', 'WB-16', 'WB-17', 'WB-18', 'WB-19', 'WB-20',
+    // WB Series - Wirobrajan
+    'WB-01', 'WB-02', 'WB-03', 'WB-05', 'WB-06', 'WB-07', 'WB-08', 'WB-09', 'WB-10',
+    'WB-11', 'WB-12', 'WB-14', 'WB-15', 'WB-16', 'WB-17', 'WB-18', 'WB-19', 'WB-20',
     'WB-21', 'WB-22', 'WB-23', 'WB-24', 'WB-25', 'WB-26', 'WB-27', 'WB-28', 'WB-29', 'WB-30',
     'WB-31', 'WB-32', 'WB-33', 'WB-34', 'WB-35', 'WB-36', 'WB-37', 'WB-38', 'WB-39', 'WB-40',
-    'WB-41', 'WB-42', 'WB-43', 'WB-44', 'WB-45', 'WB-46', 'WB-47', 'WB-48',
+    'WB-41', 'WB-42', 'WB-43', 'WB-45', 'WB-46', 'WB-47', 'WB-48',
 
-    // PN Series (47)
-    'PN-01', 'PN-02', 'PN-03', 'PN-04', 'PN-05', 'PN-06', 'PN-07', 'PN-08', 'PN-09', 'PN-10',
-    'PN-11', 'PN-12', 'PN-13', 'PN-14', 'PN-15', 'PN-16', 'PN-17', 'PN-18', 'PN-19', 'PN-20',
+    // PN Series - Panembahan
+    'PN-01', 'PN-02', 'PN-03', 'PN-05', 'PN-06', 'PN-07', 'PN-08', 'PN-09', 'PN-10',
+    'PN-11', 'PN-12', 'PN-14', 'PN-15', 'PN-16', 'PN-17', 'PN-18', 'PN-19', 'PN-20',
     'PN-21', 'PN-22', 'PN-23', 'PN-24', 'PN-25', 'PN-26', 'PN-27', 'PN-28', 'PN-29', 'PN-30',
-    'PN-31', 'PN-32', 'PN-33', 'PN-34', 'PN-35', 'PN-36', 'PN-37', 'PN-38', 'PN-39', 'PN-40',
-    'PN-41', 'PN-42', 'PN-43', 'PN-44', 'PN-45', 'PN-46', 'PN-47',
+    'PN-31', 'PN-32', 'PN-33', 'PN-34', 'PN-35', 'PN-36', 'PN-37', 'PN-38', 'PN-39',
+    'PN-41', 'PN-43', 'PN-45', 'PN-47',
 
-    // LP Series (16)
-    'LP-01', 'LP-02', 'LP-03', 'LP-04', 'LP-05', 'LP-06', 'LP-07', 'LP-08', 'LP-09', 'LP-10',
-    'LP-11', 'LP-12', 'LP-13', 'LP-14', 'LP-15', 'LP-16',
+    // MB Series - Mangkubumi
+    'MB-01', 'MB-02', 'MB-03',
 
-    // PW Series (14)
-    'PW-01', 'PW-02', 'PW-03', 'PW-04', 'PW-05', 'PW-06', 'PW-07', 'PW-08', 'PW-09', 'PW-10',
-    'PW-11', 'PW-12', 'PW-13', 'PW-14',
+    // LP Series - Lempuyangan
+    'LP-01', 'LP-02', 'LP-03', 'LP-05', 'LP-06', 'LP-07', 'LP-08', 'LP-09', 'LP-10',
+    'LP-11', 'LP-12', 'LP-14', 'LP-16',
 
-    // SL Series (14)
-    'SL-01', 'SL-02', 'SL-03', 'SL-04', 'SL-05', 'SL-06', 'SL-07', 'SL-08', 'SL-09', 'SL-10',
-    'SL-11', 'SL-12', 'SL-13', 'SL-14',
+    // PW Series - Prawirotaman
+    'PW-01', 'PW-02', 'PW-03', 'PW-05', 'PW-06', 'PW-07', 'PW-08', 'PW-09', 'PW-10',
+    'PW-11', 'PW-12', 'PW-14',
 
-    // LN Series (12)
-    'LN-01', 'LN-02', 'LN-03', 'LN-04', 'LN-05', 'LN-06', 'LN-07', 'LN-08', 'LN-09', 'LN-10',
-    'LN-11', 'LN-12',
+    // SL Series - Siliran
+    'SL-01', 'SL-02', 'SL-03', 'SL-05', 'SL-06', 'SL-07', 'SL-08', 'SL-09', 'SL-10',
+    'SL-12', 'SL-14',
 
-    // MB Series (3)
-    'MB-01', 'MB-02', 'MB-03'
+    // LS Series - Langensari
+    'LS-01', 'LS-02', 'LS-03', 'LS-05', 'LS-06', 'LS-07', 'LS-08', 'LS-10', 'LS-12',
+
+    // RW Series - Rotowijayan
+    'RW-03', 'RW-05', 'RW-07', 'RW-09',
+
+    // ML Series - Malioboro
+    'ML-01', 'ML-02', 'ML-03', 'ML-05', 'ML-06', 'ML-07', 'ML-08', 'ML-09', 'ML-10',
+    'ML-11', 'ML-12', 'ML-14'
 ];
 
 // Global State
@@ -500,18 +506,18 @@ async function handleFormSubmit(e) {
     const date = parseInt(document.getElementById('selected-date').value);
     const errorDiv = document.getElementById('form-error');
 
-    // Normalize house code to uppercase for case-insensitive validation
-    houseCode = houseCode.toUpperCase();
-    document.getElementById('house-code').value = houseCode;
+    // Normalize house code using flexible search
+    const normalizedHouseCode = normalizeHouseCode(houseCode);
+    document.getElementById('house-code').value = normalizedHouseCode;
 
     // Validation
-    if (!familyName || !houseCode || !whatsapp) {
+    if (!familyName || !normalizedHouseCode || !whatsapp) {
         showError('Semua field harus diisi');
         return;
     }
 
     // Ensure the house code matches known codes
-    if (!HOUSE_CODES.includes(houseCode)) {
+    if (!HOUSE_CODES.includes(normalizedHouseCode)) {
         showError('Kode Jalan tidak valid. Pilih dari daftar.');
         return;
     }
@@ -626,7 +632,34 @@ function initHouseAutocomplete() {
     function filter(val) {
         const q = val.trim().toLowerCase();
         if (!q) return HOUSE_CODES.slice(0, 10);
-        return HOUSE_CODES.filter(c => c.toLowerCase().includes(q)).slice(0, 10);
+
+        const matches = new Set();
+
+        // Add exact code matches
+        HOUSE_CODES.filter(c => c.toLowerCase().includes(q)).forEach(code => matches.add(code));
+
+        // Add matches based on area names and abbreviations
+        for (const [areaName, prefix] of Object.entries(HOUSE_CODE_MAPPING)) {
+            if (areaName.includes(q)) {
+                // If searching for an area name, show all codes in that area
+                HOUSE_CODES.filter(c => c.startsWith(prefix)).forEach(code => matches.add(code));
+            }
+        }
+
+        // Add matches for prefix + number combinations
+        const prefixMatch = q.match(/^([a-z]{2})[-\s]?(\d*)$/i);
+        if (prefixMatch) {
+            const prefix = prefixMatch[1].toUpperCase();
+            const numberPart = prefixMatch[2];
+            HOUSE_CODES.filter(c => {
+                if (!c.startsWith(prefix)) return false;
+                if (!numberPart) return true; // Show all codes for this prefix
+                return c.includes(numberPart);
+            }).forEach(code => matches.add(code));
+        }
+
+        // Convert to array and limit results
+        return Array.from(matches).slice(0, 10);
     }
 
     function select(idx) {
