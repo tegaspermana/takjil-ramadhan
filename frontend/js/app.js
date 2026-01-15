@@ -44,11 +44,68 @@ const HOUSE_CODES = [
     'ML-11', 'ML-12', 'ML-14'
 ];
 
-// Global State
-let registrations = [];
-let settings = {};
-let selectedDate = null;
-let currentUserDateView = 'grid'; // 'grid' or 'table'
+// House code search mapping for flexible search
+const HOUSE_CODE_MAPPING = {
+    // Wirobrajan
+    'wirobrajan': 'WB', 'wb': 'WB',
+    // Panembahan  
+    'panembahan': 'PN', 'pn': 'PN',
+    // Mangkubumi
+    'mangkubumi': 'MB', 'mb': 'MB',
+    // Lempuyangan
+    'lempuyangan': 'LP', 'lp': 'LP',
+    // Prawirotaman
+    'prawirotaman': 'PW', 'pw': 'PW',
+    // Siliran
+    'siliran': 'SL', 'sl': 'SL',
+    // Langensari
+    'langensari': 'LS', 'ls': 'LS',
+    // Rotowijayan
+    'rotowijayan': 'RW', 'rw': 'RW',
+    // Malioboro
+    'malioboro': 'ML', 'ml': 'ML'
+};
+
+// Function to normalize house code input to proper format
+function normalizeHouseCode(input) {
+    if (!input || typeof input !== 'string') return '';
+
+    const cleanInput = input.trim().toLowerCase();
+
+    // If it's already a valid code, return it
+    if (HOUSE_CODES.includes(cleanInput.toUpperCase())) {
+        return cleanInput.toUpperCase();
+    }
+
+    // Try to parse area name and number
+    for (const [areaName, prefix] of Object.entries(HOUSE_CODE_MAPPING)) {
+        if (cleanInput.includes(areaName)) {
+            // Extract number from the input
+            const numberMatch = cleanInput.match(/\d+/);
+            if (numberMatch) {
+                const number = numberMatch[0].padStart(2, '0');
+                const code = `${prefix}-${number}`;
+                if (HOUSE_CODES.includes(code)) {
+                    return code;
+                }
+            }
+        }
+    }
+
+    // Try direct prefix + number format (like "pn-14", "wb 01")
+    const prefixMatch = cleanInput.match(/^([a-z]{2})[-\s]?(\d+)$/i);
+    if (prefixMatch) {
+        const prefix = prefixMatch[1].toUpperCase();
+        const number = prefixMatch[2].padStart(2, '0');
+        const code = `${prefix}-${number}`;
+        if (HOUSE_CODES.includes(code)) {
+            return code;
+        }
+    }
+
+    // If no match found, try to uppercase and check again
+    return cleanInput.toUpperCase();
+}
 
 // Initialize Application
 document.addEventListener('DOMContentLoaded', function () {
@@ -635,30 +692,39 @@ function initHouseAutocomplete() {
 
         const matches = new Set();
 
-        // Add exact code matches
+        // Add exact code matches first
         HOUSE_CODES.filter(c => c.toLowerCase().includes(q)).forEach(code => matches.add(code));
 
-        // Add matches based on area names and abbreviations
+        // Check for area name matches
         for (const [areaName, prefix] of Object.entries(HOUSE_CODE_MAPPING)) {
-            if (areaName.includes(q)) {
-                // If searching for an area name, show all codes in that area
+            if (q === areaName || areaName.includes(q) || q.includes(areaName)) {
                 HOUSE_CODES.filter(c => c.startsWith(prefix)).forEach(code => matches.add(code));
             }
         }
 
-        // Add matches for prefix + number combinations
+        // Check for prefix matches (like "pn", "wb")
+        if (q.length === 2 && HOUSE_CODE_MAPPING[q]) {
+            const prefix = HOUSE_CODE_MAPPING[q];
+            HOUSE_CODES.filter(c => c.startsWith(prefix)).forEach(code => matches.add(code));
+        }
+
+        // Check for prefix + number (like "pn-14", "wb 01")
         const prefixMatch = q.match(/^([a-z]{2})[-\s]?(\d*)$/i);
         if (prefixMatch) {
             const prefix = prefixMatch[1].toUpperCase();
             const numberPart = prefixMatch[2];
             HOUSE_CODES.filter(c => {
                 if (!c.startsWith(prefix)) return false;
-                if (!numberPart) return true; // Show all codes for this prefix
+                if (!numberPart) return true;
                 return c.includes(numberPart);
             }).forEach(code => matches.add(code));
         }
 
-        // Convert to array and limit results
+        // If no matches found, return some suggestions
+        if (matches.size === 0) {
+            return HOUSE_CODES.slice(0, 10);
+        }
+
         return Array.from(matches).slice(0, 10);
     }
 
