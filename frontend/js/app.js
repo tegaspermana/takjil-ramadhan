@@ -256,57 +256,97 @@ function setupEventListeners() {
 async function openRegistrationModal(date) {
     selectedDate = date;
 
+    // Check if slot is full
+    const dateRegs = registrations.filter(r => r.tanggal === date);
+    const isFull = dateRegs.length >= 2;
+
     // Update modal title and date first
     document.getElementById('modal-title').textContent = `Daftar Takjil - Tanggal ${date} Ramadhan`;
     document.getElementById('selected-date').value = date;
 
-    // Reset form
-    document.getElementById('family-name').value = '';
-    document.getElementById('house-code').value = '';
-    document.getElementById('whatsapp').value = '';
-    document.getElementById('form-error').classList.add('hidden');
+    // Get form and full message elements
+    const form = document.getElementById('registration-form');
+    const fullMessage = document.getElementById('full-slot-message');
+
+    if (isFull) {
+        // Hide form and show full message
+        if (form) form.style.display = 'none';
+        if (fullMessage) fullMessage.style.display = 'block';
+
+        // Update full message content
+        if (fullMessage) {
+            fullMessage.innerHTML = `
+                <div class="text-center py-6">
+                    <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="fas fa-calendar-times text-red-600 text-2xl"></i>
+                    </div>
+                    <h4 class="text-lg font-semibold text-gray-800 mb-2">Slot Penuh</h4>
+                    <p class="text-gray-600 mb-4">Tanggal ${date} Ramadhan sudah penuh terdaftar.</p>
+                    <p class="text-sm font-medium text-gray-700 mb-4">Sudah terdaftar:</p>
+                    ${dateRegs.map(reg => `
+                        <div class="text-sm text-gray-600 mb-2 p-2 bg-gray-50 rounded">
+                            <i class="fas fa-home mr-2"></i>
+                            ${reg.kode_jalan} - ${reg.nama_keluarga}
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+    } else {
+        // Show form and hide full message
+        if (form) form.style.display = 'block';
+        if (fullMessage) fullMessage.style.display = 'none';
+
+        // Reset form
+        document.getElementById('family-name').value = '';
+        document.getElementById('house-code').value = '';
+        document.getElementById('whatsapp').value = '';
+        document.getElementById('form-error').classList.add('hidden');
+    }
 
     // Show modal immediately
     document.getElementById('registration-modal').classList.remove('hidden');
     document.getElementById('registration-modal').classList.add('flex');
 
-    // Load latest data in background
-    try {
-        await loadData();
+    // Load latest data in background (only if not full)
+    if (!isFull) {
+        try {
+            await loadData();
 
-        // Update the grid with fresh data
-        renderDateGrid();
-        updateStats();
+            // Update the grid with fresh data
+            renderDateGrid();
+            updateStats();
 
-        // Update existing registrations display with fresh data
-        const dateRegs = registrations.filter(r => r.tanggal === date);
-        console.log(`Loaded ${dateRegs.length} registrations for date ${date}`);
+            // Update existing registrations display with fresh data
+            const updatedDateRegs = registrations.filter(r => r.tanggal === date);
+            console.log(`Loaded ${updatedDateRegs.length} registrations for date ${date}`);
 
-        // Remove existing registrations display
-        const existingContainer = document.querySelector('.existing-registrations');
-        if (existingContainer) existingContainer.remove();
+            // Remove existing registrations display
+            const existingContainer = document.querySelector('.existing-registrations');
+            if (existingContainer) existingContainer.remove();
 
-        // Show updated existing registrations
-        if (dateRegs.length > 0) {
-            const details = document.createElement('div');
-            details.className = 'existing-registrations mb-4 p-4 bg-gray-50 rounded-lg';
-            details.innerHTML = `
-                <p class="text-sm font-medium text-gray-700 mb-2">Sudah terdaftar:</p>
-                ${dateRegs.map(reg => `
-                    <div class="text-sm text-gray-600 mb-1">
-                        <i class="fas fa-home mr-2"></i>
-                        ${reg.kode_jalan} - ${reg.nama_keluarga}
-                    </div>
-                `).join('')}
-            `;
+            // Show updated existing registrations
+            if (updatedDateRegs.length > 0) {
+                const details = document.createElement('div');
+                details.className = 'existing-registrations mb-4 p-4 bg-gray-50 rounded-lg';
+                details.innerHTML = `
+                    <p class="text-sm font-medium text-gray-700 mb-2">Sudah terdaftar:</p>
+                    ${updatedDateRegs.map(reg => `
+                        <div class="text-sm text-gray-600 mb-1">
+                            <i class="fas fa-home mr-2"></i>
+                            ${reg.kode_jalan} - ${reg.nama_keluarga}
+                        </div>
+                    `).join('')}
+                `;
 
-            // Insert after the modal header (title + close button) but before the form
-            const modalHeader = document.getElementById('modal-title').parentElement;
-            modalHeader.after(details);
+                // Insert after the modal header (title + close button) but before the form
+                const modalHeader = document.getElementById('modal-title').parentElement;
+                modalHeader.after(details);
+            }
+        } catch (error) {
+            console.error('Error loading latest data for modal:', error);
+            // Modal is already shown, so we don't need to do anything special here
         }
-    } catch (error) {
-        console.error('Error loading latest data for modal:', error);
-        // Modal is already shown, so we don't need to do anything special here
     }
 }
 
