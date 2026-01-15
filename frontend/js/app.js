@@ -202,15 +202,15 @@ function renderDateGrid() {
         }
 
         html += `
-            <div class="date-card ${statusClass} rounded-xl p-4 text-white cursor-pointer ${isLocked ? 'opacity-70' : 'hover:shadow-lg'}"
+            <div class="date-card ${statusClass} rounded-xl sm:rounded-xl p-4 sm:p-4 text-white cursor-pointer ${isLocked ? 'opacity-70' : 'hover:shadow-lg'} min-h-[80px] sm:min-h-[100px] flex items-center justify-center"
                  onclick="${!isLocked ? `openRegistrationModal(${date})` : ''}">
-                <div class="text-center">
-                    <div class="font-bold text-xl mb-1">${date}</div>
-                    <div class="text-sm opacity-90 mb-2">${dayName}${fullDateStr ? ' • ' + fullDateStr : ''}</div>
-                    <div class="text-xs font-semibold bg-white/30 px-2 py-1 rounded-full inline-block">
+                <div class="text-center w-full">
+                    <div class="font-bold text-xl sm:text-xl mb-1">${date}</div>
+                    <div class="text-sm opacity-90 mb-2 hidden sm:block">${dayName}${fullDateStr ? ' • ' + fullDateStr : ''}</div>
+                    <div class="text-xs font-semibold bg-white/30 px-2 py-1 rounded-full inline-block mb-1">
                         ${filled}/2
                     </div>
-                    <div class="text-xs mt-2">
+                    <div class="text-xs">
                         ${status === 'available' ? 'Tersedia' :
                 status === 'partial' ? '1/2 Terisi' :
                     status === 'full' ? 'Penuh' : 'Tertutup'}
