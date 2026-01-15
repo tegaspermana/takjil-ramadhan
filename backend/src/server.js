@@ -266,6 +266,23 @@ app.put('/api/registrations/:id', (req, res) => {
     }
 });
 
+// Clear all registrations
+app.delete('/api/registrations', (req, res) => {
+    try {
+        const stmt = db.prepare('DELETE FROM registrations');
+        const result = stmt.run();
+
+        res.json({
+            success: true,
+            message: `Berhasil menghapus ${result.changes} data pendaftaran`,
+            deletedCount: result.changes
+        });
+    } catch (error) {
+        console.error('Error clearing registrations:', error);
+        res.status(500).json({ success: false, error: 'Internal server error' });
+    }
+});
+
 // Get settings
 app.get('/api/settings', (req, res) => {
     try {

@@ -351,6 +351,35 @@ async function togglePhase2() {
     }
 }
 
+async function clearAllData() {
+    if (!confirm('⚠️ PERINGATAN: Ini akan menghapus SEMUA data pendaftaran secara permanen!\n\nApakah Anda yakin ingin melanjutkan?')) {
+        return;
+    }
+
+    if (!confirm('Konfirmasi akhir: Semua data akan hilang dan tidak dapat dikembalikan. Lanjutkan?')) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/registrations`, {
+            method: 'DELETE'
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            alert(`✅ ${data.message}`);
+            // Refresh the data
+            await refreshData();
+        } else {
+            alert('❌ Gagal menghapus data: ' + data.error);
+        }
+    } catch (error) {
+        console.error('Error clearing data:', error);
+        alert('❌ Koneksi error saat menghapus data');
+    }
+}
+
 // Edit modal handlers
 function openEditModal(id) {
     const reg = registrations.find(r => r.id === id);
