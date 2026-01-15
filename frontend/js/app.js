@@ -326,33 +326,29 @@ function renderUserDateTable() {
 
         const canClick = !isLocked && filled < 2;
         const buttonHtml = canClick
-            ? `<button onclick="openRegistrationModal(${date})" class="px-3 py-1 bg-emerald-600 text-white text-sm rounded hover:bg-emerald-700 transition">
+            ? `<button onclick="openRegistrationModal(${date})" class="mt-2 px-3 py-1 bg-emerald-600 text-white text-sm rounded hover:bg-emerald-700 transition">
                 Daftar
                </button>`
-            : '<span class="text-gray-400 text-sm">-</span>';
+            : '';
 
         html += `
             <tr class="hover:bg-gray-50">
-                <td class="px-4 py-3 whitespace-nowrap">
-                    <div class="font-medium text-gray-900">${date} Ramadhan</div>
-                    ${fullDateStr ? `<div class="text-sm text-gray-500">${fullDateStr}</div>` : ''}
-                </td>
-                <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                    ${dayName}
-                </td>
-                <td class="px-4 py-3 whitespace-nowrap">
-                    <span class="px-2 py-1 text-xs font-medium rounded-full ${bgColor} ${statusColor}">
-                        ${statusText}
-                    </span>
-                </td>
-                <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                    ${filled}/2
+                <td class="px-4 py-3">
+                    <div class="flex justify-between items-start">
+                        <div class="flex-1">
+                            <div class="font-medium text-gray-900">${date} Ramadhan</div>
+                            ${fullDateStr ? `<div class="text-sm text-gray-500">${fullDateStr}</div>` : ''}
+                            <div class="mt-1">
+                                <span class="px-2 py-1 text-xs font-medium rounded-full ${bgColor} ${statusColor}">
+                                    ${statusText}
+                                </span>
+                            </div>
+                            ${buttonHtml}
+                        </div>
+                    </div>
                 </td>
                 <td class="px-4 py-3 text-sm text-gray-900">
                     ${registrantsHtml}
-                </td>
-                <td class="px-4 py-3 whitespace-nowrap">
-                    ${buttonHtml}
                 </td>
             </tr>
         `;
