@@ -42,8 +42,7 @@ function initDatabase() {
             kode_jalan TEXT NOT NULL,
             nama_keluarga TEXT NOT NULL,
             whatsapp TEXT NOT NULL,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            UNIQUE(tanggal, kode_jalan)
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         );
         
         CREATE TABLE IF NOT EXISTS settings (
@@ -106,82 +105,78 @@ app.get('/api/registrations', (req, res) => {
 // Add new registration
 app.post('/api/registrations', (req, res) => {
     try {
-        const { tanggal, kode_jalan, nama_keluarga, whatsapp } = req.body;
+        const body = req.body;
+        const isArray = Array.isArray(body);
+        const registrations = isArray ? body : [body];
 
-        // Validate required fields
-        if (!tanggal || !kode_jalan || !nama_keluarga || !whatsapp) {
-            return res.status(400).json({
-                success: false,
-                error: 'Semua field harus diisi'
-            });
-        }
+        // Validate each registration
+        for (const reg of registrations) {
+            const { tanggal, kode_jalan, nama_keluarga, whatsapp } = reg;
 
-        // Validate date
-        const dateNum = parseInt(tanggal);
-        if (!isValidDate(dateNum)) {
-            return res.status(400).json({
-                success: false,
-                error: 'Tanggal harus antara 1-30'
-            });
-        }
-
-        // Check phase 2 availability
-        if (dateNum > 20) {
-            const settings = db.prepare('SELECT phase2_unlocked FROM settings WHERE id = 1').get();
-            if (!settings.phase2_unlocked) {
+            // Validate required fields
+            if (!tanggal || !kode_jalan || !nama_keluarga || !whatsapp) {
                 return res.status(400).json({
                     success: false,
-                    error: 'Tanggal 21-30 belum dibuka'
+                    error: 'Semua field harus diisi'
+                });
+            }
+
+            // Validate date
+            const dateNum = parseInt(tanggal);
+            if (!isValidDate(dateNum)) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Tanggal harus antara 1-30'
+                });
+            }
+
+            // Check phase 2 availability
+            if (dateNum > 20) {
+                const settings = db.prepare('SELECT phase2_unlocked FROM settings WHERE id = 1').get();
+                if (!settings.phase2_unlocked) {
+                    return res.status(400).json({
+                        success: false,
+                        error: 'Tanggal 21-30 belum dibuka'
+                    });
+                }
+            }
+
+            // Validate WhatsApp format
+            if (!isValidWhatsApp(whatsapp)) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Format WhatsApp tidak valid. Harus diawali 62'
                 });
             }
         }
 
-        // Validate WhatsApp format
-        if (!isValidWhatsApp(whatsapp)) {
-            return res.status(400).json({
-                success: false,
-                error: 'Format WhatsApp tidak valid. Harus diawali 62'
-            });
-        }
+        // Get the date (all should be the same)
+        const dateNum = parseInt(registrations[0].tanggal);
 
-        // Check max 2 registrations per day
+        // Check max registrations per day (collective)
         const countStmt = db.prepare('SELECT COUNT(*) as count FROM registrations WHERE tanggal = ?');
         const countResult = countStmt.get(dateNum);
-        if (countResult.count >= 2) {
+        if (countResult.count + registrations.length > 2) {
             return res.status(400).json({
                 success: false,
                 error: 'Tanggal ini sudah penuh (2 keluarga)'
             });
         }
 
-        // Check duplicate house code for same date
-        const duplicateStmt = db.prepare('SELECT COUNT(*) as count FROM registrations WHERE tanggal = ? AND kode_jalan = ?');
-        const duplicateResult = duplicateStmt.get(dateNum, kode_jalan);
-        if (duplicateResult.count > 0) {
-            return res.status(400).json({
-                success: false,
-                error: 'Kode jalan ini sudah terdaftar di tanggal ini'
-            });
-        }
-
-        // Insert registration
-        const insertStmt = db.prepare(`
-            INSERT INTO registrations (tanggal, kode_jalan, nama_keluarga, whatsapp) 
-            VALUES (?, ?, ?, ?)
-        `);
-
-        const result = insertStmt.run(dateNum, kode_jalan, nama_keluarga, whatsapp);
+        const result = insertStmt.run(dateNum, reg.kode_jalan, reg.nama_keluarga, reg.whatsapp);
+        results.push(result.lastInsertRowid);
+    }
 
         res.json({
-            success: true,
-            message: 'Pendaftaran berhasil',
-            id: result.lastInsertRowid
-        });
+        success: true,
+        message: `Pendaftaran berhasil${isArray ? ` (${registrations.length} slot)` : ''}`,
+        ids: results
+    });
 
-    } catch (error) {
-        console.error('Error adding registration:', error);
-        res.status(500).json({ success: false, error: 'Internal server error' });
-    }
+} catch (error) {
+    console.error('Error adding registration:', error);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+}
 });
 
 // Delete registration
