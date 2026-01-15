@@ -448,11 +448,11 @@ async function openRegistrationModal(date) {
             const updatedDateRegs = registrations.filter(r => r.tanggal === date);
             console.log(`Loaded ${updatedDateRegs.length} registrations for date ${date}`);
 
-            // Remove existing registrations display
+            // Remove any existing registrations display
             const existingContainer = document.querySelector('.existing-registrations');
             if (existingContainer) existingContainer.remove();
 
-            // Show updated existing registrations
+            // Show updated existing registrations ONLY if there are any (and slot is not full)
             if (updatedDateRegs.length > 0 && updatedDateRegs.length < 2) {
                 const details = document.createElement('div');
                 details.className = 'existing-registrations mb-4 p-4 bg-gray-50 rounded-lg';
