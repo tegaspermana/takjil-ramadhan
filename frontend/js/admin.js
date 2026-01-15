@@ -600,39 +600,30 @@ function initEditHouseAutocomplete() {
 
         const matches = new Set();
 
-        // Add exact code matches first
+        // Add exact code matches
         HOUSE_CODES.filter(c => c.toLowerCase().includes(q)).forEach(code => matches.add(code));
 
-        // Check for area name matches
+        // Add matches based on area names and abbreviations
         for (const [areaName, prefix] of Object.entries(HOUSE_CODE_MAPPING)) {
-            if (q === areaName || areaName.includes(q) || q.includes(areaName)) {
+            if (areaName.includes(q)) {
+                // If searching for an area name, show all codes in that area
                 HOUSE_CODES.filter(c => c.startsWith(prefix)).forEach(code => matches.add(code));
             }
         }
 
-        // Check for prefix matches (like "pn", "wb")
-        if (q.length === 2 && HOUSE_CODE_MAPPING[q]) {
-            const prefix = HOUSE_CODE_MAPPING[q];
-            HOUSE_CODES.filter(c => c.startsWith(prefix)).forEach(code => matches.add(code));
-        }
-
-        // Check for prefix + number (like "pn-14", "wb 01")
+        // Add matches for prefix + number combinations
         const prefixMatch = q.match(/^([a-z]{2})[-\s]?(\d*)$/i);
         if (prefixMatch) {
             const prefix = prefixMatch[1].toUpperCase();
             const numberPart = prefixMatch[2];
             HOUSE_CODES.filter(c => {
                 if (!c.startsWith(prefix)) return false;
-                if (!numberPart) return true;
+                if (!numberPart) return true; // Show all codes for this prefix
                 return c.includes(numberPart);
             }).forEach(code => matches.add(code));
         }
 
-        // If no matches found, return some suggestions
-        if (matches.size === 0) {
-            return HOUSE_CODES.slice(0, 10);
-        }
-
+        // Convert to array and limit results
         return Array.from(matches).slice(0, 10);
     }
 
