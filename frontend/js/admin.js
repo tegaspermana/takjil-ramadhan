@@ -70,6 +70,8 @@ async function showAdminDashboard() {
     await loadAdminData();
     // Initialize edit modal autocomplete
     initEditHouseAutocomplete();
+    // Initialize date overview
+    renderDateOverview();
 }
 
 function handleLogout() {
@@ -105,6 +107,7 @@ async function refreshData() {
             registrations = data.data;
             updateStats();
             renderTable();
+            renderDateOverview();
         }
     } catch (error) {
         console.error('Error refreshing data:', error);
@@ -593,6 +596,185 @@ async function saveSettings() {
     }
 }
 
+// Global state for date view
+let currentDateView = 'grid'; // 'grid' or 'table'
+
+function setDateView(view) {
+    currentDateView = view;
+
+    const gridView = document.getElementById('date-grid-view');
+    const tableView = document.getElementById('date-table-view');
+    const gridBtn = document.getElementById('grid-view-btn');
+    const tableBtn = document.getElementById('table-view-btn');
+
+    if (view === 'grid') {
+        gridView.classList.remove('hidden');
+        tableView.classList.add('hidden');
+        gridBtn.className = 'px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition';
+        tableBtn.className = 'px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition';
+    } else {
+        gridView.classList.add('hidden');
+        tableView.classList.remove('hidden');
+        gridBtn.className = 'px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition';
+        tableBtn.className = 'px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition';
+    }
+
+    renderDateOverview();
+}
+
+function renderDateOverview() {
+    if (currentDateView === 'grid') {
+        renderDateGrid();
+    } else {
+        renderDateTable();
+    }
+}
+
+function renderDateGrid() {
+    const grid = document.getElementById('admin-date-grid');
+    if (!grid) return;
+
+    const dayNames = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+    let html = '';
+
+    for (let date = 1; date <= 30; date++) {
+        const dateRegs = registrations.filter(r => r.tanggal === date);
+        const filled = dateRegs.length;
+        const available = 2 - filled;
+
+        // Compute full calendar date and weekday if start_date is configured
+        let dayName = dayNames[(date - 1) % 7];
+        let fullDateStr = '';
+        if (settings && settings.start_date) {
+            try {
+                const base = new Date(settings.start_date + 'T00:00:00');
+                const dateObj = new Date(base);
+                dateObj.setDate(base.getDate() + (date - 1));
+                dayName = dateObj.toLocaleDateString('id-ID', { weekday: 'long' });
+                fullDateStr = dateObj.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+            } catch (err) {
+                // keep defaults
+            }
+        }
+
+        // Determine status
+        let status = 'available';
+        let statusClass = 'status-available';
+        let isLocked = false;
+
+        if (date > 20 && !settings.phase2_unlocked) {
+            status = 'locked';
+            statusClass = 'status-locked';
+            isLocked = true;
+        } else if (filled === 2) {
+            status = 'full';
+            statusClass = 'status-full';
+        } else if (filled === 1) {
+            status = 'partial';
+            statusClass = 'status-partial';
+        }
+
+        html += `
+            <div class="date-card ${statusClass} rounded-lg p-3 text-white text-center ${isLocked ? 'opacity-70' : ''}">
+                <div class="font-bold text-lg mb-1">${date}</div>
+                <div class="text-xs opacity-90 mb-1">${dayName}</div>
+                <div class="text-xs font-semibold bg-white/20 px-2 py-1 rounded">
+                    ${filled}/2
+                </div>
+                <div class="text-xs mt-1">
+                    ${status === 'available' ? 'Tersedia' :
+                status === 'partial' ? '1/2 Terisi' :
+                    status === 'full' ? 'Penuh' : 'Tertutup'}
+                </div>
+            </div>
+        `;
+    }
+
+    grid.innerHTML = html;
+}
+
+function renderDateTable() {
+    const tbody = document.getElementById('date-table-body');
+    if (!tbody) return;
+
+    const dayNames = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+    let html = '';
+
+    for (let date = 1; date <= 30; date++) {
+        const dateRegs = registrations.filter(r => r.tanggal === date);
+        const filled = dateRegs.length;
+
+        // Compute full calendar date and weekday if start_date is configured
+        let dayName = dayNames[(date - 1) % 7];
+        let fullDateStr = '';
+        if (settings && settings.start_date) {
+            try {
+                const base = new Date(settings.start_date + 'T00:00:00');
+                const dateObj = new Date(base);
+                dateObj.setDate(base.getDate() + (date - 1));
+                dayName = dateObj.toLocaleDateString('id-ID', { weekday: 'long' });
+                fullDateStr = dateObj.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+            } catch (err) {
+                // keep defaults
+            }
+        }
+
+        // Determine status
+        let status = 'available';
+        let statusClass = 'table-status-available';
+        let statusText = 'Tersedia';
+        let isLocked = false;
+
+        if (date > 20 && !settings.phase2_unlocked) {
+            status = 'locked';
+            statusClass = 'table-status-locked';
+            statusText = 'Tertutup';
+            isLocked = true;
+        } else if (filled === 2) {
+            status = 'full';
+            statusClass = 'table-status-full';
+            statusText = 'Penuh';
+        } else if (filled === 1) {
+            status = 'partial';
+            statusClass = 'table-status-partial';
+            statusText = '1/2 Terisi';
+        }
+
+        // Create registrants list
+        let registrantsHtml = '';
+        if (dateRegs.length > 0) {
+            registrantsHtml = dateRegs.map(reg => `${reg.kode_jalan} - ${reg.nama_keluarga}`).join('<br>');
+        } else {
+            registrantsHtml = '<span class="text-gray-400">Belum ada pendaftar</span>';
+        }
+
+        html += `
+            <tr class="hover:bg-gray-50">
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <span class="font-medium">${date} Ramadhan</span>
+                    ${fullDateStr ? `<br><span class="text-sm text-gray-500">${fullDateStr}</span>` : ''}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <span class="text-sm">${dayName}</span>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <span class="px-2 py-1 text-xs font-medium rounded-full ${statusClass}">
+                        ${statusText}
+                    </span>
+                </td>
+                <td class="px-6 py-4">
+                    <span class="text-sm font-medium">${filled}/2</span>
+                </td>
+                <td class="px-6 py-4">
+                    <div class="text-sm">${registrantsHtml}</div>
+                </td>
+            </tr>
+        `;
+    }
+
+    tbody.innerHTML = html;
+}
+
 function printTable() {
     window.print();
 }
@@ -606,5 +788,6 @@ window.togglePhase2 = togglePhase2;
 window.printTable = printTable;
 window.deleteRegistration = deleteRegistration;
 window.saveSettings = saveSettings;
+window.setDateView = setDateView;
 
 console.log('Takjil Admin JavaScript loaded');

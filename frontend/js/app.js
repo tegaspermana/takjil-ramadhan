@@ -42,6 +42,7 @@ const HOUSE_CODES = [
 let registrations = [];
 let settings = {};
 let selectedDate = null;
+let currentUserDateView = 'grid'; // 'grid' or 'table'
 
 // Initialize Application
 document.addEventListener('DOMContentLoaded', function () {
@@ -61,7 +62,7 @@ async function initApp() {
         await loadData();
 
         // Render UI
-        renderDateGrid();
+        renderUserDateOverview();
         updateStats();
 
         // Setup event listeners
@@ -236,6 +237,124 @@ function updateStats() {
     document.getElementById('phase-status').className = `text-2xl font-bold ${settings.phase2_unlocked ? 'text-emerald-600' : 'text-gray-600'}`;
 }
 
+// User Date View Functions
+function setUserDateView(view) {
+    currentUserDateView = view;
+
+    const gridView = document.getElementById('user-date-grid-view');
+    const tableView = document.getElementById('user-date-table-view');
+    const gridBtn = document.getElementById('user-grid-view-btn');
+    const tableBtn = document.getElementById('user-table-view-btn');
+
+    if (view === 'grid') {
+        gridView.classList.remove('hidden');
+        tableView.classList.add('hidden');
+        gridBtn.className = 'px-3 py-2 bg-emerald-600 text-white text-sm rounded-lg hover:bg-emerald-700 transition';
+        tableBtn.className = 'px-3 py-2 bg-gray-600 text-white text-sm rounded-lg hover:bg-gray-700 transition';
+    } else {
+        gridView.classList.add('hidden');
+        tableView.classList.remove('hidden');
+        gridBtn.className = 'px-3 py-2 bg-gray-600 text-white text-sm rounded-lg hover:bg-gray-700 transition';
+        tableBtn.className = 'px-3 py-2 bg-emerald-600 text-white text-sm rounded-lg hover:bg-emerald-700 transition';
+    }
+
+    renderUserDateOverview();
+}
+
+function renderUserDateOverview() {
+    if (currentUserDateView === 'grid') {
+        renderDateGrid();
+    } else {
+        renderUserDateTable();
+    }
+}
+
+function renderUserDateTable() {
+    const tbody = document.getElementById('user-date-table-body');
+    if (!tbody) return;
+
+    const dayNames = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+    let html = '';
+
+    for (let date = 1; date <= 30; date++) {
+        const dateRegs = registrations.filter(r => r.tanggal === date);
+        const filled = dateRegs.length;
+
+        // Compute full calendar date and weekday if start_date is configured
+        let dayName = dayNames[(date - 1) % 7];
+        let fullDateStr = '';
+        if (settings && settings.start_date) {
+            try {
+                const base = new Date(settings.start_date + 'T00:00:00');
+                const dateObj = new Date(base);
+                dateObj.setDate(base.getDate() + (date - 1));
+                dayName = dateObj.toLocaleDateString('id-ID', { weekday: 'long' });
+                fullDateStr = dateObj.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+            } catch (err) {
+                // keep defaults
+            }
+        }
+
+        // Determine status
+        let statusText = 'Tersedia';
+        let statusColor = 'text-emerald-600';
+        let bgColor = 'bg-emerald-50';
+        let isLocked = false;
+
+        if (date > 20 && !settings.phase2_unlocked) {
+            statusText = 'Tertutup';
+            statusColor = 'text-gray-600';
+            bgColor = 'bg-gray-50';
+            isLocked = true;
+        } else if (filled === 2) {
+            statusText = 'Penuh';
+            statusColor = 'text-red-600';
+            bgColor = 'bg-red-50';
+        } else if (filled === 1) {
+            statusText = '1/2 Terisi';
+            statusColor = 'text-amber-600';
+            bgColor = 'bg-amber-50';
+        }
+
+        // Create registrants list
+        let registrantsHtml = '';
+        if (dateRegs.length > 0) {
+            registrantsHtml = dateRegs.map(reg => `${reg.kode_jalan} - ${reg.nama_keluarga}`).join('<br>');
+        } else {
+            registrantsHtml = '<span class="text-gray-400">-</span>';
+        }
+
+        const canClick = !isLocked && filled < 2;
+        const rowClass = canClick ? 'hover:bg-gray-50 cursor-pointer' : '';
+        const clickHandler = canClick ? `onclick="openRegistrationModal(${date})"` : '';
+
+        html += `
+            <tr class="${rowClass}" ${clickHandler}>
+                <td class="px-4 py-3 whitespace-nowrap">
+                    <div class="font-medium text-gray-900">${date} Ramadhan</div>
+                    ${fullDateStr ? `<div class="text-sm text-gray-500">${fullDateStr}</div>` : ''}
+                </td>
+                <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                    ${dayName}
+                </td>
+                <td class="px-4 py-3 whitespace-nowrap">
+                    <span class="px-2 py-1 text-xs font-medium rounded-full ${bgColor} ${statusColor}">
+                        ${statusText}
+                    </span>
+                </td>
+                <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                    ${filled}/2
+                </td>
+                <td class="px-4 py-3 text-sm text-gray-900">
+                    ${registrantsHtml}
+                </td>
+            </tr>
+        `;
+    }
+
+    tbody.innerHTML = html;
+}
+
 function setupEventListeners() {
     // Registration form submit
     const form = document.getElementById('registration-form');
@@ -314,7 +433,7 @@ async function openRegistrationModal(date) {
             await loadData();
 
             // Update the grid with fresh data
-            renderDateGrid();
+            renderUserDateOverview();
             updateStats();
 
             // Update existing registrations display with fresh data
@@ -357,7 +476,7 @@ function closeModal(refresh = false) {
     if (refresh) {
         // Re-fetch data and update UI without a full page reload
         loadData().then(() => {
-            renderDateGrid();
+            renderUserDateOverview();
             updateStats();
         }).catch(err => {
             console.error('Error refreshing data after modal close:', err);
@@ -435,7 +554,7 @@ async function handleFormSubmit(e) {
             await loadData();
 
             // Update UI
-            renderDateGrid();
+            renderUserDateOverview();
             updateStats();
 
             // Show success message
@@ -575,5 +694,6 @@ function initHouseAutocomplete() {
 window.openRegistrationModal = openRegistrationModal;
 window.closeModal = closeModal;
 window.closeSuccessModal = closeSuccessModal;
+window.setUserDateView = setUserDateView;
 
 console.log('Takjil App JavaScript loaded');
