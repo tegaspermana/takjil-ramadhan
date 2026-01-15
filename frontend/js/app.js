@@ -395,6 +395,25 @@ async function openRegistrationModal(date) {
     const form = document.getElementById('registration-form');
     const fullMessage = document.getElementById('full-slot-message');
 
+    // ========== IMPORTANT: CLEAR PREVIOUS CONTENT ==========
+    // Remove any existing "Sudah terdaftar" section from previous modal
+    const existingContainer = document.querySelector('.existing-registrations');
+    if (existingContainer) {
+        existingContainer.remove();
+    }
+
+    // Clear the full message content if it exists
+    if (fullMessage) {
+        fullMessage.innerHTML = '';
+        fullMessage.style.display = 'none';
+    }
+
+    // Make sure form is visible by default
+    if (form) {
+        form.style.display = 'block';
+    }
+    // ========== END OF CLEANUP ==========
+
     if (isFull) {
         // Hide form and show full message
         if (form) form.style.display = 'none';
@@ -420,10 +439,7 @@ async function openRegistrationModal(date) {
             `;
         }
     } else {
-        // Show form and hide full message
-        if (form) form.style.display = 'block';
-        if (fullMessage) fullMessage.style.display = 'none';
-
+        // Show form and hide full message (already done in cleanup)
         // Reset form
         document.getElementById('family-name').value = '';
         document.getElementById('house-code').value = '';
@@ -444,13 +460,9 @@ async function openRegistrationModal(date) {
             renderUserDateOverview();
             updateStats();
 
-            // Update existing registrations display with fresh data
+            // Update existing registrations display with fresh data for THIS date
             const updatedDateRegs = registrations.filter(r => r.tanggal === date);
             console.log(`Loaded ${updatedDateRegs.length} registrations for date ${date}`);
-
-            // Remove any existing registrations display
-            const existingContainer = document.querySelector('.existing-registrations');
-            if (existingContainer) existingContainer.remove();
 
             // Show updated existing registrations ONLY if there are any (and slot is not full)
             if (updatedDateRegs.length > 0 && updatedDateRegs.length < 2) {
@@ -478,16 +490,28 @@ async function openRegistrationModal(date) {
 }
 
 function closeModal(refresh = false) {
+    // Clear modal content before closing
+    const existingContainer = document.querySelector('.existing-registrations');
+    if (existingContainer) {
+        existingContainer.remove();
+    }
+
+    const fullMessage = document.getElementById('full-slot-message');
+    if (fullMessage) {
+        fullMessage.innerHTML = '';
+        fullMessage.style.display = 'none';
+    }
+
+    // Hide modal
     document.getElementById('registration-modal').classList.add('hidden');
     document.getElementById('registration-modal').classList.remove('flex');
 
     if (refresh) {
-        // Re-fetch data and update UI without a full page reload
         loadData().then(() => {
             renderUserDateOverview();
             updateStats();
         }).catch(err => {
-            console.error('Error refreshing data after modal close:', err);
+            console.error('Error refreshing data:', err);
         });
     }
 }
