@@ -300,7 +300,9 @@ async function openRegistrationModal(date) {
                 `).join('')}
             `;
 
-            document.getElementById('modal-title').after(details);
+            // Insert after the modal header (title + close button) but before the form
+            const modalHeader = document.getElementById('modal-title').parentElement;
+            modalHeader.after(details);
         }
     } catch (error) {
         console.error('Error loading latest data for modal:', error);
