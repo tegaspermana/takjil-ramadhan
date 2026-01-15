@@ -253,35 +253,12 @@ function setupEventListeners() {
     }
 }
 
-function openRegistrationModal(date) {
+async function openRegistrationModal(date) {
     selectedDate = date;
 
-    // Get registrations for this date
-    const dateRegs = registrations.filter(r => r.tanggal === date);
-
-    // Update modal
+    // Update modal title and date first
     document.getElementById('modal-title').textContent = `Daftar Takjil - Tanggal ${date} Ramadhan`;
     document.getElementById('selected-date').value = date;
-
-    // Show existing registrations
-    const existingContainer = document.querySelector('.existing-registrations');
-    if (existingContainer) existingContainer.remove();
-
-    if (dateRegs.length > 0) {
-        const details = document.createElement('div');
-        details.className = 'existing-registrations mb-4 p-4 bg-gray-50 rounded-lg';
-        details.innerHTML = `
-            <p class="text-sm font-medium text-gray-700 mb-2">Sudah terdaftar:</p>
-            ${dateRegs.map(reg => `
-                <div class="text-sm text-gray-600 mb-1">
-                    <i class="fas fa-home mr-2"></i>
-                    ${reg.kode_jalan} - ${reg.nama_keluarga}
-                </div>
-            `).join('')}
-        `;
-
-        document.getElementById('modal-title').after(details);
-    }
 
     // Reset form
     document.getElementById('family-name').value = '';
@@ -289,9 +266,41 @@ function openRegistrationModal(date) {
     document.getElementById('whatsapp').value = '';
     document.getElementById('form-error').classList.add('hidden');
 
-    // Show modal
+    // Show modal immediately
     document.getElementById('registration-modal').classList.remove('hidden');
     document.getElementById('registration-modal').classList.add('flex');
+
+    // Load latest data in background
+    try {
+        await loadData();
+
+        // Update existing registrations display with fresh data
+        const dateRegs = registrations.filter(r => r.tanggal === date);
+
+        // Remove existing registrations display
+        const existingContainer = document.querySelector('.existing-registrations');
+        if (existingContainer) existingContainer.remove();
+
+        // Show updated existing registrations
+        if (dateRegs.length > 0) {
+            const details = document.createElement('div');
+            details.className = 'existing-registrations mb-4 p-4 bg-gray-50 rounded-lg';
+            details.innerHTML = `
+                <p class="text-sm font-medium text-gray-700 mb-2">Sudah terdaftar:</p>
+                ${dateRegs.map(reg => `
+                    <div class="text-sm text-gray-600 mb-1">
+                        <i class="fas fa-home mr-2"></i>
+                        ${reg.kode_jalan} - ${reg.nama_keluarga}
+                    </div>
+                `).join('')}
+            `;
+
+            document.getElementById('modal-title').after(details);
+        }
+    } catch (error) {
+        console.error('Error loading latest data for modal:', error);
+        // Modal is already shown, so we don't need to do anything special here
+    }
 }
 
 function closeModal(refresh = false) {
