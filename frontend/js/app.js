@@ -572,8 +572,9 @@ async function handleFormSubmit(e) {
         return;
     }
 
-    // Ensure the house code matches known codes
-    if (!HOUSE_CODES.includes(houseCode)) {
+    // Ensure the house code matches known codes (case-insensitive check)
+    const normalizedHouseCode = houseCode.toUpperCase();
+    if (!HOUSE_CODES.includes(normalizedHouseCode)) {
         showError('Kode Jalan tidak valid. Pilih dari daftar.');
         return;
     }
@@ -601,7 +602,7 @@ async function handleFormSubmit(e) {
             },
             body: JSON.stringify({
                 tanggal: date,
-                kode_jalan: houseCode,
+                kode_jalan: normalizedHouseCode, // Use normalized version
                 nama_keluarga: familyName,
                 whatsapp: formattedWhatsApp
             })
