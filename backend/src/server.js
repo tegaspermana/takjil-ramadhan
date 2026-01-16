@@ -34,18 +34,68 @@ app.use(express.static(join(__dirname, '..', 'frontend')));
 function initDatabase() {
     const db = new Database(DB_PATH);
 
-    // Create tables
+    // Check if old table with UNIQUE constraint exists
+    const tableInfo = db.prepare(`
+        SELECT sql FROM sqlite_master 
+        WHERE type='table' AND name='registrations'
+    `).get();
+
+    // If table exists and has UNIQUE constraint, drop it
+    if (tableInfo && tableInfo.sql && tableInfo.sql.includes('UNIQUE(tanggal, kode_jalan)')) {
+        console.log('Old table with UNIQUE constraint detected. Dropping and recreating...');
+
+        // Backup data if any
+        const existingData = db.prepare('SELECT * FROM registrations').all();
+
+        // Drop old table
+        db.prepare('DROP TABLE IF EXISTS registrations').run();
+
+        // Create new table without UNIQUE constraint
+        db.exec(`
+            CREATE TABLE registrations (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                tanggal INTEGER NOT NULL CHECK (tanggal BETWEEN 1 AND 30),
+                kode_jalan TEXT NOT NULL,
+                nama_keluarga TEXT NOT NULL,
+                whatsapp TEXT NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
+        // Restore data if any existed
+        if (existingData.length > 0) {
+            const insertStmt = db.prepare(`
+                INSERT INTO registrations (tanggal, kode_jalan, nama_keluarga, whatsapp, created_at)
+                VALUES (?, ?, ?, ?, ?)
+            `);
+
+            for (const row of existingData) {
+                insertStmt.run(
+                    row.tanggal,
+                    row.kode_jalan,
+                    row.nama_keluarga,
+                    row.whatsapp,
+                    row.created_at
+                );
+            }
+            console.log(`Restored ${existingData.length} records`);
+        }
+    } else {
+        // Create table if it doesn't exist
+        db.exec(`
+            CREATE TABLE IF NOT EXISTS registrations (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                tanggal INTEGER NOT NULL CHECK (tanggal BETWEEN 1 AND 30),
+                kode_jalan TEXT NOT NULL,
+                nama_keluarga TEXT NOT NULL,
+                whatsapp TEXT NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+    }
+
+    // Create settings table (unchanged)
     db.exec(`
-        CREATE TABLE IF NOT EXISTS registrations (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            tanggal INTEGER NOT NULL CHECK (tanggal BETWEEN 1 AND 30),
-            kode_jalan TEXT NOT NULL,
-            nama_keluarga TEXT NOT NULL,
-            whatsapp TEXT NOT NULL,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            UNIQUE(tanggal, kode_jalan)
-        );
-        
         CREATE TABLE IF NOT EXISTS settings (
             id INTEGER PRIMARY KEY DEFAULT 1,
             phase2_unlocked BOOLEAN DEFAULT FALSE,
@@ -155,14 +205,14 @@ app.post('/api/registrations', (req, res) => {
         }
 
         // Check duplicate house code for same date
-        const duplicateStmt = db.prepare('SELECT COUNT(*) as count FROM registrations WHERE tanggal = ? AND kode_jalan = ?');
-        const duplicateResult = duplicateStmt.get(dateNum, kode_jalan);
-        if (duplicateResult.count > 0) {
-            return res.status(400).json({
-                success: false,
-                error: 'Kode jalan ini sudah terdaftar di tanggal ini'
-            });
-        }
+        //const duplicateStmt = db.prepare('SELECT COUNT(*) as count FROM registrations WHERE tanggal = ? AND kode_jalan = ?');
+        //const duplicateResult = duplicateStmt.get(dateNum, kode_jalan);
+        //if (duplicateResult.count > 0) {
+        //    return res.status(400).json({
+        //        success: false,
+        //        error: 'Kode jalan ini sudah terdaftar di tanggal ini'
+        //});
+        //}
 
         // Insert registration
         const insertStmt = db.prepare(`
@@ -240,11 +290,11 @@ app.put('/api/registrations/:id', (req, res) => {
         }
 
         // Check duplicate house code for same date excluding this id
-        const duplicateStmt = db.prepare('SELECT COUNT(*) as count FROM registrations WHERE tanggal = ? AND kode_jalan = ? AND id != ?');
-        const duplicateResult = duplicateStmt.get(dateNum, kode_jalan, id);
-        if (duplicateResult.count > 0) {
-            return res.status(400).json({ success: false, error: 'Kode jalan ini sudah terdaftar di tanggal ini' });
-        }
+        //const duplicateStmt = db.prepare('SELECT COUNT(*) as count FROM registrations WHERE tanggal = ? AND kode_jalan = ? AND id != ?');
+        //const duplicateResult = duplicateStmt.get(dateNum, kode_jalan, id);
+        //if (duplicateResult.count > 0) {
+        //    return res.status(400).json({ success: false, error: 'Kode jalan ini sudah terdaftar di tanggal ini' });
+        //}
 
         const updateStmt = db.prepare(`
             UPDATE registrations
