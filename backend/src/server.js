@@ -234,6 +234,176 @@ app.post('/api/registrations', (req, res) => {
     }
 });
 
+// Add bulk registration (atomic operation)
+app.post('/api/registrations/bulk', (req, res) => {
+    const db = initDatabase(); // Get database instance
+    const { registrations, atomic = true } = req.body;
+
+    // Validate input
+    if (!Array.isArray(registrations) || registrations.length === 0) {
+        return res.status(400).json({
+            success: false,
+            error: 'Data registrasi tidak valid'
+        });
+    }
+
+    // If atomic is true, use transaction
+    if (atomic) {
+        const transaction = db.transaction(() => {
+            const insertedIds = [];
+
+            // Check all registrations first
+            for (const reg of registrations) {
+                const { tanggal, kode_jalan, nama_keluarga, whatsapp } = reg;
+
+                // Validate required fields
+                if (!tanggal || !kode_jalan || !nama_keluarga || !whatsapp) {
+                    throw new Error('Semua field harus diisi');
+                }
+
+                // Validate date
+                const dateNum = parseInt(tanggal);
+                if (!isValidDate(dateNum)) {
+                    throw new Error('Tanggal harus antara 1-30');
+                }
+
+                // Check phase 2 availability
+                if (dateNum > 20) {
+                    const settings = db.prepare('SELECT phase2_unlocked FROM settings WHERE id = 1').get();
+                    if (!settings.phase2_unlocked) {
+                        throw new Error('Tanggal 21-30 belum dibuka');
+                    }
+                }
+
+                // Validate WhatsApp format
+                if (!isValidWhatsApp(whatsapp)) {
+                    throw new Error('Format WhatsApp tidak valid. Harus diawali 62');
+                }
+
+                // Check max 2 registrations per day (considering all bulk registrations)
+                const countStmt = db.prepare(`
+                    SELECT COUNT(*) as count FROM registrations 
+                    WHERE tanggal = ?
+                `);
+                const countResult = countStmt.get(dateNum);
+
+                // Check if adding all registrations would exceed limit
+                const dateRegsInBulk = registrations.filter(r => parseInt(r.tanggal) === dateNum).length;
+                if (countResult.count + dateRegsInBulk > 2) {
+                    throw new Error(`Tanggal ${dateNum} sudah penuh atau akan melebihi batas 2 keluarga`);
+                }
+            }
+
+            // All validations passed, insert all registrations
+            const insertStmt = db.prepare(`
+                INSERT INTO registrations (tanggal, kode_jalan, nama_keluarga, whatsapp) 
+                VALUES (?, ?, ?, ?)
+            `);
+
+            for (const reg of registrations) {
+                const { tanggal, kode_jalan, nama_keluarga, whatsapp } = reg;
+                const dateNum = parseInt(tanggal);
+                const result = insertStmt.run(dateNum, kode_jalan, nama_keluarga, whatsapp);
+                insertedIds.push(result.lastInsertRowid);
+            }
+
+            return insertedIds;
+        });
+
+        try {
+            const insertedIds = transaction();
+            res.json({
+                success: true,
+                message: `Berhasil mendaftarkan ${insertedIds.length} slot`,
+                ids: insertedIds,
+                count: insertedIds.length
+            });
+        } catch (error) {
+            console.error('Bulk registration error:', error);
+            res.status(400).json({
+                success: false,
+                error: error.message || 'Gagal menyimpan data registrasi'
+            });
+        }
+    } else {
+        // Non-atomic insertion (not recommended)
+        const insertedIds = [];
+        let hasError = false;
+        let errorMessage = '';
+
+        for (const reg of registrations) {
+            try {
+                const { tanggal, kode_jalan, nama_keluarga, whatsapp } = reg;
+
+                // Validate required fields
+                if (!tanggal || !kode_jalan || !nama_keluarga || !whatsapp) {
+                    throw new Error('Semua field harus diisi');
+                }
+
+                const dateNum = parseInt(tanggal);
+                if (!isValidDate(dateNum)) {
+                    throw new Error('Tanggal harus antara 1-30');
+                }
+
+                // Check phase 2
+                if (dateNum > 20) {
+                    const settings = db.prepare('SELECT phase2_unlocked FROM settings WHERE id = 1').get();
+                    if (!settings.phase2_unlocked) {
+                        throw new Error('Tanggal 21-30 belum dibuka');
+                    }
+                }
+
+                // Check max 2 registrations per day
+                const countStmt = db.prepare('SELECT COUNT(*) as count FROM registrations WHERE tanggal = ?');
+                const countResult = countStmt.get(dateNum);
+                if (countResult.count >= 2) {
+                    throw new Error(`Tanggal ${dateNum} sudah penuh`);
+                }
+
+                if (!isValidWhatsApp(whatsapp)) {
+                    throw new Error('Format WhatsApp tidak valid');
+                }
+
+                // Insert registration
+                const insertStmt = db.prepare(`
+                    INSERT INTO registrations (tanggal, kode_jalan, nama_keluarga, whatsapp) 
+                    VALUES (?, ?, ?, ?)
+                `);
+
+                const result = insertStmt.run(dateNum, kode_jalan, nama_keluarga, whatsapp);
+                insertedIds.push(result.lastInsertRowid);
+
+            } catch (error) {
+                hasError = true;
+                errorMessage = error.message;
+                break;
+            }
+        }
+
+        if (hasError) {
+            // Rollback any inserted records
+            for (const id of insertedIds) {
+                try {
+                    db.prepare('DELETE FROM registrations WHERE id = ?').run(id);
+                } catch (rollbackError) {
+                    console.error('Rollback error:', rollbackError);
+                }
+            }
+
+            res.status(400).json({
+                success: false,
+                error: errorMessage
+            });
+        } else {
+            res.json({
+                success: true,
+                message: `Berhasil mendaftarkan ${insertedIds.length} slot`,
+                ids: insertedIds
+            });
+        }
+    }
+});
+
 // Delete registration
 app.delete('/api/registrations/:id', (req, res) => {
     try {
