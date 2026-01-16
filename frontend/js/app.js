@@ -44,7 +44,7 @@ const HOUSE_CODES = [
     'ML-11', 'ML-12', 'ML-14',
 
     //Lainnya
-    'Lainnya'
+    'LAINNYA'
 ];
 
 // Global State

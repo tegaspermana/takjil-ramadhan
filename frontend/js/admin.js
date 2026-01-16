@@ -16,7 +16,7 @@ const HOUSE_CODES = [
     'LS-01', 'LS-02', 'LS-03', 'LS-05', 'LS-06', 'LS-07', 'LS-08', 'LS-10', 'LS-12',
     'RW-03', 'RW-05', 'RW-07', 'RW-09',
     'ML-01', 'ML-02', 'ML-03', 'ML-05', 'ML-06', 'ML-07', 'ML-08', 'ML-09', 'ML-10', 'ML-11', 'ML-12', 'ML-14',
-    'Lainnya'
+    'LAINNYA'
 ];
 
 // Global State
