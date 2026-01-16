@@ -214,10 +214,10 @@ function renderDateGrid() {
             <div class="date-card ${statusClass} rounded-lg md:rounded-xl p-2 md:p-4 text-white cursor-pointer ${isLocked ? 'opacity-70' : 'hover:shadow-lg'}"
                  onclick="${!isLocked ? `openRegistrationModal(${date})` : ''}">
                 <div class="text-center">
-                    <div class="font-bold text-lg md:text-xl mb-1">${date}</div>
-                    <div class="text-xs md:text-sm opacity-90 mb-1 md:mb-2">${dayName}</div>
-                    ${fullDateStr ? `<div class="text-xs opacity-75 hidden sm:block">${fullDateStr}</div>` : ''}
-                    <div class="text-xs mt-1 md:mt-2">
+                    <div class="font-bold text-base md:text-xl">${date}</div>
+                    <div class="text-xs md:text-sm opacity-75">${dayName}</div>
+                    ${fullDateStr ? `<div class="font-bold text-base">${fullDateStr}</div>` : ''}
+                    <div class="text-xs mt-2 md:mt-3 mb-1 md:mb-2">
                          ${status === 'available' ? 'Tersedia' :
                 status === 'partial' ? '1/2 Terisi' :
                     status === 'full' ? 'Penuh' : 'Tertutup'}
