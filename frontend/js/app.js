@@ -552,7 +552,46 @@ function closeSuccessModal() {
 async function handleFormSubmit(e) {
     e.preventDefault();
 
-    // ... existing validation code ...
+    // Get form values
+    const familyName = document.getElementById('family-name').value.trim();
+    let houseCode = document.getElementById('house-code').value;
+    const whatsapp = document.getElementById('whatsapp').value.trim();
+    const date = parseInt(document.getElementById('selected-date').value);
+    const errorDiv = document.getElementById('form-error');
+    const submitBtn = document.getElementById('submit-btn');
+    const submitText = document.getElementById('submit-text');
+    const submitLoading = document.getElementById('submit-loading');
+
+    // Normalize house code to uppercase for case-insensitive validation
+    houseCode = houseCode.toUpperCase();
+    document.getElementById('house-code').value = houseCode;
+
+    // Validation
+    if (!familyName || !houseCode || !whatsapp) {
+        showError('Semua field harus diisi');
+        return;
+    }
+
+    // Ensure the house code matches known codes
+    if (!HOUSE_CODES.includes(houseCode)) {
+        showError('Kode Jalan tidak valid. Pilih dari daftar.');
+        return;
+    }
+
+    const whatsappClean = whatsapp.replace(/\D/g, '');
+    if (!/^08[0-9]{9,}$/.test(whatsappClean)) {
+        showError('Nomor WhatsApp tidak valid. Harus diawali 08 dan minimal 10 digit');
+        return;
+    }
+
+    // Format WhatsApp number
+    const formattedWhatsApp = '62' + whatsappClean.substring(1);
+
+    // Show loading state
+    submitText.classList.add('hidden');
+    submitLoading.classList.remove('hidden');
+    submitBtn.disabled = true;
+    errorDiv.classList.add('hidden');
 
     try {
         const response = await fetch(`${API_BASE_URL}/api/registrations`, {
