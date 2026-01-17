@@ -371,39 +371,106 @@ function setupEventListeners() {
 async function openRegistrationModal(date) {
     selectedDate = date;
 
-    // Clear previous content
+    // ========== IMPORTANT: CLEAR PREVIOUS CONTENT ==========
+    // Remove any existing "Sudah terdaftar" section from previous modal
     const existingContainer = document.querySelector('.existing-registrations');
-    if (existingContainer) existingContainer.remove();
+    if (existingContainer) {
+        existingContainer.remove();
+    }
 
+    // Clear the full message content if it exists
     const fullMessage = document.getElementById('full-slot-message');
     if (fullMessage) {
         fullMessage.innerHTML = '';
         fullMessage.style.display = 'none';
     }
 
-    // Hide "book both" section by default
-    const bookBothSection = document.getElementById('book-both-section');
-    if (bookBothSection) bookBothSection.classList.add('hidden');
-
-    // Reset checkbox
-    const bookBothCheckbox = document.getElementById('book-both-slots');
-    if (bookBothCheckbox) bookBothCheckbox.checked = false;
+    // Make sure form is visible by default
+    const form = document.getElementById('registration-form');
+    if (form) {
+        form.style.display = 'block';
+    }
+    // ========== END OF CLEANUP ==========
 
     // Update modal title and date
     document.getElementById('modal-title').textContent = `Daftar Takjil - Tanggal ${date} Ramadhan`;
     document.getElementById('selected-date').value = date;
 
-    // Show modal
+    // Show modal immediately (don't wait for data load)
     document.getElementById('registration-modal').classList.remove('hidden');
     document.getElementById('registration-modal').classList.add('flex');
 
+    // ========== ALWAYS LOAD FRESH DATA ==========
     try {
-        await loadData(); // Load fresh registrations
+        await loadData(); // This loads fresh registrations
+
+        // Update the grid with fresh data
         renderUserDateOverview();
 
+        // Get fresh registrations for this date
         const dateRegs = registrations.filter(r => r.tanggal === date);
         const isFull = dateRegs.length >= 2;
-        const availableSlots = 2 - dateRegs.length;
+
+        // Reset form (always do this after data load)
+        document.getElementById('family-name').value = '';
+        document.getElementById('house-code').value = '';
+        document.getElementById('whatsapp').value = '';
+        document.getElementById('form-error').classList.add('hidden');
+
+        if (isFull) {
+            // Hide form and show full message
+            if (form) form.style.display = 'none';
+            if (fullMessage) fullMessage.style.display = 'block';
+
+            // Update full message content
+            if (fullMessage) {
+                fullMessage.innerHTML = `
+                    <div class="text-center py-6">
+                        <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <i class="fas fa-calendar-times text-red-600 text-2xl"></i>
+                        </div>
+                        <h4 class="text-lg font-semibold text-gray-800 mb-2">Slot Penuh</h4>
+                        <p class="text-gray-600 mb-4">Tanggal ${date} Ramadhan sudah penuh terdaftar.</p>
+                        <p class="text-sm font-medium text-gray-700 mb-4">Sudah terdaftar:</p>
+                        ${dateRegs.map(reg => `
+                            <div class="text-sm text-gray-600 mb-2 p-2 bg-gray-50 rounded">
+                                <i class="fas fa-home mr-2"></i>
+                                ${reg.kode_jalan} - ${reg.nama_keluarga}
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            }
+        } else {
+            // Show form and hide full message
+            if (form) form.style.display = 'block';
+            if (fullMessage) fullMessage.style.display = 'none';
+
+            // Show existing registrations if any (and slot is not full)
+            if (dateRegs.length > 0) {
+                const details = document.createElement('div');
+                details.className = 'existing-registrations mb-4 p-4 bg-gray-50 rounded-lg';
+                details.innerHTML = `
+                    <p class="text-sm font-medium text-gray-700 mb-2">Sudah terdaftar:</p>
+                    ${dateRegs.map(reg => `
+                        <div class="text-sm text-gray-600 mb-1">
+                            <i class="fas fa-home mr-2"></i>
+                            ${reg.kode_jalan} - ${reg.nama_keluarga}
+                        </div>
+                    `).join('')}
+                `;
+
+                // Insert after the modal header (title + close button) but before the form
+                const modalHeader = document.getElementById('modal-title').parentElement;
+                modalHeader.after(details);
+            }
+        }
+
+    } catch (error) {
+        console.error('Error loading latest data for modal:', error);
+        // Fallback: Use cached data if fresh data fails
+        const dateRegs = registrations.filter(r => r.tanggal === date);
+        const isFull = dateRegs.length >= 2;
 
         // Reset form
         document.getElementById('family-name').value = '';
@@ -412,8 +479,8 @@ async function openRegistrationModal(date) {
         document.getElementById('form-error').classList.add('hidden');
 
         if (isFull) {
-            // Hide form and show full message
-            document.getElementById('registration-form').style.display = 'none';
+            // Hide form and show full message with cached data
+            if (form) form.style.display = 'none';
             if (fullMessage) {
                 fullMessage.style.display = 'block';
                 fullMessage.innerHTML = `
@@ -434,16 +501,11 @@ async function openRegistrationModal(date) {
                 `;
             }
         } else {
-            // Show form and hide full message
-            document.getElementById('registration-form').style.display = 'block';
+            // Show form with cached data
+            if (form) form.style.display = 'block';
             if (fullMessage) fullMessage.style.display = 'none';
 
-            // Show "book both" option if there are 2 available slots
-            if (availableSlots === 2 && bookBothSection) {
-                bookBothSection.classList.remove('hidden');
-            }
-
-            // Show existing registrations if any
+            // Show existing registrations with cached data
             if (dateRegs.length > 0) {
                 const details = document.createElement('div');
                 details.className = 'existing-registrations mb-4 p-4 bg-gray-50 rounded-lg';
@@ -456,14 +518,11 @@ async function openRegistrationModal(date) {
                         </div>
                     `).join('')}
                 `;
+
                 const modalHeader = document.getElementById('modal-title').parentElement;
                 modalHeader.after(details);
             }
         }
-
-    } catch (error) {
-        console.error('Error loading latest data for modal:', error);
-        // Fallback implementation...
     }
 }
 
