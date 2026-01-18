@@ -12,50 +12,20 @@
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <!-- Font Awesome Icons -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+    rel="stylesheet" />
   <style>
-    /* Clean Inter font with system fallbacks */
     * {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-      -webkit-font-smoothing: antialiased;
-      -moz-osx-font-smoothing: grayscale;
+      font-family: 'Poppins', sans-serif;
     }
 
-    /* Base improvements */
-    body {
-      font-weight: 400;
-      line-height: 1.5;
-      color: #1f2937;
-    }
-
-    /* Headings with better spacing */
-    h1,
-    h2,
-    h3 {
-      font-weight: 600;
-      letter-spacing: -0.025em;
-    }
-
-    /* Form elements */
-    input,
-    button,
-    textarea {
-      font-family: inherit;
-    }
-
-    /* Date cards - cleaner look */
     .date-card {
       transition: all 0.2s ease;
-      font-weight: 500;
-      backdrop-filter: blur(10px);
     }
 
     .date-card:hover {
-      transform: translateY(-3px);
-      box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.1);
+      transform: translateY(-2px);
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
     }
 
     .status-available {
@@ -71,18 +41,17 @@
     }
 
     .status-locked {
-      background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+      background: linear-gradient(135deg, #9ca3af 0%, #6b7280 100%);
     }
 
-    /* Modal with smoother animation */
     .modal-animation {
-      animation: modalSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      animation: modalFadeIn 0.3s ease-out;
     }
 
-    @keyframes modalSlideIn {
+    @keyframes modalFadeIn {
       from {
         opacity: 0;
-        transform: translateY(-15px) scale(0.97);
+        transform: translateY(-20px) scale(0.95);
       }
 
       to {
@@ -91,9 +60,8 @@
       }
     }
 
-    /* Loading spinner */
     .loading-spinner {
-      animation: spin 0.8s linear infinite;
+      animation: spin 1s linear infinite;
     }
 
     @keyframes spin {
@@ -104,26 +72,6 @@
       to {
         transform: rotate(360deg);
       }
-    }
-
-    /* Better focus states */
-    input:focus,
-    button:focus {
-      outline: 2px solid #10b981;
-      outline-offset: 2px;
-    }
-
-    /* Cleaner table */
-    table {
-      border-collapse: separate;
-      border-spacing: 0;
-    }
-
-    th {
-      font-weight: 600;
-      text-transform: uppercase;
-      font-size: 0.75rem;
-      letter-spacing: 0.05em;
     }
   </style>
 </head>
