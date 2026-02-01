@@ -5,22 +5,23 @@ services:
       dockerfile: ./backend/Dockerfile
     container_name: takjil-ramadhan
     ports:
-      - '8181:3001' # Host:Container
+      - "8181:3001"
     volumes:
-      - takjil-data:/app/database
-      - ./backups:/app/backups
+      - takjil_database:/app/database
+      - takjil_node_modules:/app/node_modules
     environment:
-      - NODE_ENV=production
+      - NODE_ENV=development
       - PORT=3001
       - DB_PATH=/app/database/takjil.db
       - ADMIN_PASSWORD=takjil2026
+      - JWT_SECRET=JkDWtIpyRYlAHB8vYCU6xI/+a8XlICpnKo0Bl0caRcA=
     restart: unless-stopped
     networks:
       - takjil-network
 
 volumes:
-  takjil-data:
-    driver: local
+  takjil_node_modules:
+  takjil_database:
 
 networks:
   takjil-network:

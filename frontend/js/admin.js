@@ -791,3 +791,101 @@ window.saveSettings = saveSettings;
 window.setDateView = setDateView;
 
 console.log('Takjil Admin JavaScript loaded');
+
+// ===============================
+// Cookie-based Admin Auth Adapter
+// (Compatible with admin.html onclick handlers)
+// ===============================
+const __API_BASE__ = ''; // same-origin
+
+async function __api(path, options = {}) {
+    return fetch(`${__API_BASE__}${path}`, {
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+        ...options
+    });
+}
+
+async function __checkAuth() {
+    const r = await __api('/api/admin/me');
+    if (!r.ok) return false;
+    const j = await r.json().catch(() => ({}));
+    return !!j.success;
+}
+
+function __showDashboard() {
+    const login = document.getElementById('login-screen');
+    const dash = document.getElementById('admin-dashboard');
+    login?.classList.add('hidden');
+    dash?.classList.remove('hidden');
+}
+
+function __showLogin() {
+    const login = document.getElementById('login-screen');
+    const dash = document.getElementById('admin-dashboard');
+    dash?.classList.add('hidden');
+    login?.classList.remove('hidden');
+}
+
+function __showLoginError(msg) {
+    const box = document.getElementById('login-error');
+    if (!box) return;
+    box.textContent = msg || 'Login gagal';
+    box.classList.remove('hidden');
+}
+
+function __clearLoginError() {
+    const box = document.getElementById('login-error');
+    if (!box) return;
+    box.textContent = '';
+    box.classList.add('hidden');
+}
+
+// Expose global functions because admin.html uses onclick="handleLogin()" and onclick="handleLogout()"
+window.handleLogin = async function handleLogin() {
+    __clearLoginError();
+    const password = document.getElementById('admin-password')?.value || '';
+    if (!password) return __showLoginError('Password wajib diisi');
+
+    const r = await __api('/api/admin/login', {
+        method: 'POST',
+        body: JSON.stringify({ password })
+    });
+
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok || !j.success) {
+        return __showLoginError(j.error || 'Password salah');
+    }
+
+    // verify cookie session
+    const ok = await __checkAuth().catch(() => false);
+    if (!ok) {
+        return __showLoginError(
+            'Login berhasil tapi sesi tidak tersimpan. Jika masih HTTP lokal, cookie Secure bisa ditolak.'
+        );
+    }
+
+    __showDashboard();
+
+    // Call existing initializer if your original file has it
+    // Most repos have refreshData() or loadData() - we try both safely:
+    if (typeof window.refreshData === 'function') window.refreshData();
+    if (typeof window.loadData === 'function') window.loadData();
+};
+
+window.handleLogout = async function handleLogout() {
+    await __api('/api/admin/logout', { method: 'POST' }).catch(() => { });
+    __showLogin();
+};
+
+// Auto-check on load (so refresh doesn’t require re-login)
+document.addEventListener('DOMContentLoaded', async () => {
+    const ok = await __checkAuth().catch(() => false);
+    if (ok) {
+        __showDashboard();
+        if (typeof window.refreshData === 'function') window.refreshData();
+        if (typeof window.loadData === 'function') window.loadData();
+    } else {
+        __showLogin();
+    }
+});

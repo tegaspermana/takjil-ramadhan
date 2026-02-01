@@ -1,11 +1,12 @@
 node_modules
-npm-debug.log
-.git
-.env
-.vscode
-.idea
-.DS_Store
+    **/node_modules
+npm - debug.log
+    .git
+    .env
+    .vscode
+    .idea
+    .DS_Store
 backups
-**/backups
-**/database
-*.log
+    **/backups
+    **/database
+    *.log
