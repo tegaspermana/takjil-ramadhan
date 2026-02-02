@@ -51,3 +51,10 @@ build/
 # Misc
 *.tmp
 *.temp
+
+.env
+.env.*
+*.db
+*.db-wal
+*.db-shm
+backup.log
