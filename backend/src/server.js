@@ -25,9 +25,24 @@ const ADMIN_COOKIE = 'takjil_admin';
 // Optional (kalau suatu hari frontend beda domain)
 const CORS_ORIGIN = process.env.CORS_ORIGIN || '';
 
+// Body limits (Step 4)
+const JSON_LIMIT = process.env.JSON_LIMIT || '12kb';
+const FORM_LIMIT = process.env.FORM_LIMIT || '6kb';
+
+// Rate limits (Step 4)
+const RL_PUBLIC_POST_WINDOW_MS = 10 * 60 * 1000;
+const RL_PUBLIC_POST_LIMIT = Number(process.env.RL_PUBLIC_POST_LIMIT || 20);
+
+const RL_PUBLIC_GET_WINDOW_MS = 5 * 60 * 1000;
+const RL_PUBLIC_GET_LIMIT = Number(process.env.RL_PUBLIC_GET_LIMIT || 120);
+
+// Optional: limit heavy admin actions (export, delete all)
+const RL_ADMIN_EXPORT_WINDOW_MS = 10 * 60 * 1000;
+const RL_ADMIN_EXPORT_LIMIT = Number(process.env.RL_ADMIN_EXPORT_LIMIT || 30);
+
 /**
  * Behind reverse proxy (Cloudflare Tunnel):
- * trust proxy diperlukan agar req.secure dan x-forwarded-proto bekerja benar. [5](https://elementor.com/blog/permission-denied-error-in-docker/)
+ * trust proxy diperlukan agar req.secure dan x-forwarded-proto bekerja benar.
  */
 app.set('trust proxy', 1);
 app.disable('x-powered-by');
@@ -39,6 +54,7 @@ app.use(
     })
 );
 
+// CORS: default same-origin (lebih aman). Aktifkan hanya jika dibutuhkan.
 if (CORS_ORIGIN) {
     app.use(
         cors({
@@ -46,12 +62,25 @@ if (CORS_ORIGIN) {
             credentials: true
         })
     );
-} else {
-    app.use(cors());
 }
 
-app.use(express.json());
+// Payload limits (Step 4)
+app.use(express.json({ limit: JSON_LIMIT }));
+app.use(express.urlencoded({ extended: false, limit: FORM_LIMIT }));
 app.use(cookieParser());
+
+// Error handler khusus body parser (invalid JSON / payload too large)
+app.use((err, req, res, next) => {
+    // payload too large
+    if (err?.type === 'entity.too.large') {
+        return res.status(413).json({ success: false, error: 'Payload terlalu besar' });
+    }
+    // JSON parse error
+    if (err instanceof SyntaxError && 'body' in err) {
+        return res.status(400).json({ success: false, error: 'JSON tidak valid' });
+    }
+    return next(err);
+});
 
 // Serve static frontend from repo root or docker layout
 const frontendPath1 = join(__dirname, '..', 'frontend'); // if server.js is /app/src
@@ -133,6 +162,52 @@ function migrateAdminPassword(db) {
 const db = initDatabase();
 
 // ---------------------
+// Step 4: Backend allowlist HOUSE_CODES (sinkron dengan frontend)
+// ---------------------
+const HOUSE_CODES = new Set([
+    // WB Series
+    'WB-01', 'WB-02', 'WB-03', 'WB-05', 'WB-06', 'WB-07', 'WB-08', 'WB-09', 'WB-10',
+    'WB-11', 'WB-12', 'WB-14', 'WB-15', 'WB-16', 'WB-17', 'WB-18', 'WB-19', 'WB-20',
+    'WB-21', 'WB-22', 'WB-23', 'WB-24', 'WB-25', 'WB-26', 'WB-27', 'WB-28', 'WB-29', 'WB-30',
+    'WB-31', 'WB-32', 'WB-33', 'WB-34', 'WB-35', 'WB-36', 'WB-37', 'WB-38', 'WB-39', 'WB-40',
+    'WB-41', 'WB-42', 'WB-43', 'WB-45', 'WB-46', 'WB-47', 'WB-48',
+
+    // PN Series
+    'PN-01', 'PN-02', 'PN-03', 'PN-05', 'PN-06', 'PN-07', 'PN-08', 'PN-09', 'PN-10',
+    'PN-11', 'PN-12', 'PN-14', 'PN-15', 'PN-16', 'PN-17', 'PN-18', 'PN-19', 'PN-20',
+    'PN-21', 'PN-22', 'PN-23', 'PN-24', 'PN-25', 'PN-26', 'PN-27', 'PN-28', 'PN-29', 'PN-30',
+    'PN-31', 'PN-32', 'PN-33', 'PN-34', 'PN-35', 'PN-36', 'PN-37', 'PN-38', 'PN-39', 'PN-41',
+    'PN-43', 'PN-45', 'PN-47',
+
+    // MB Series
+    'MB-01', 'MB-02', 'MB-03',
+
+    // LP Series
+    'LP-01', 'LP-02', 'LP-03', 'LP-05', 'LP-06', 'LP-07', 'LP-08', 'LP-09', 'LP-10',
+    'LP-11', 'LP-12', 'LP-14', 'LP-16',
+
+    // PW Series
+    'PW-01', 'PW-02', 'PW-03', 'PW-05', 'PW-06', 'PW-07', 'PW-08', 'PW-09', 'PW-10',
+    'PW-11', 'PW-12', 'PW-14',
+
+    // SL Series
+    'SL-01', 'SL-02', 'SL-03', 'SL-05', 'SL-06', 'SL-07', 'SL-08', 'SL-09', 'SL-10',
+    'SL-12', 'SL-14',
+
+    // LS Series
+    'LS-01', 'LS-02', 'LS-03', 'LS-05', 'LS-06', 'LS-07', 'LS-08', 'LS-10', 'LS-12',
+
+    // RW Series
+    'RW-03', 'RW-05', 'RW-07', 'RW-09',
+
+    // ML Series
+    'ML-01', 'ML-02', 'ML-03', 'ML-05', 'ML-06', 'ML-07', 'ML-08', 'ML-09', 'ML-10',
+    'ML-11', 'ML-12', 'ML-14',
+
+    'LAINNYA'
+]);
+
+// ---------------------
 // Helpers
 // ---------------------
 function isValidDate(n) {
@@ -141,9 +216,48 @@ function isValidDate(n) {
 
 function normalizeWhatsApp(input) {
     const digits = String(input || '').replace(/\D/g, '');
+    // Terima format 62xxxxxxxxxx (10-15 digit total termasuk 62) - kamu pakai range 8-13 setelah 62.
     if (/^62\d{8,13}$/.test(digits)) return digits;
     if (/^08\d{8,13}$/.test(digits)) return '62' + digits.slice(1);
     return null;
+}
+
+function sanitizeName(input) {
+    const s = String(input ?? '').trim();
+    // remove control chars
+    return s.replace(/[\u0000-\u001F\u007F]/g, '');
+}
+
+function sanitizeHouseCode(input) {
+    return String(input ?? '').trim().toUpperCase();
+}
+
+function buildValidationError(fields) {
+    return { success: false, error: 'Validasi gagal', fields };
+}
+
+/**
+ * Step 5 (defense-in-depth): origin/referer check "soft"
+ * - Jika header Origin/Referer ada -> harus match origin request sendiri.
+ * - Jika tidak ada (mis. curl) -> allow.
+ */
+function requireSameOriginSoft(req, res, next) {
+    const origin = req.get('origin');
+    const referer = req.get('referer');
+    if (!origin && !referer) return next();
+
+    // construct expected origin
+    const proto = req.secure || req.get('x-forwarded-proto') === 'https' ? 'https' : 'http';
+    const host = req.get('host');
+    const expected = `${proto}://${host}`;
+
+    const okOrigin = origin ? origin === expected : true;
+    const okReferer = referer ? referer.startsWith(expected + '/') || referer === expected : true;
+
+    if (!okOrigin || !okReferer) {
+        return res.status(403).json({ success: false, error: 'Forbidden (origin mismatch)' });
+    }
+    return next();
 }
 
 function requireAdmin(req, res, next) {
@@ -160,13 +274,91 @@ function requireAdmin(req, res, next) {
     }
 }
 
-// Rate limit login (anti-bruteforce)
+function logAudit(event, meta = {}) {
+    // minimal structured logging (Step 7 foundation)
+    try {
+        console.log(JSON.stringify({ ts: new Date().toISOString(), event, ...meta }));
+    } catch {
+        console.log(`[${event}]`, meta);
+    }
+}
+
+// ---------------------
+// Step 4: Rate limiters
+// ---------------------
+const jsonRateLimitHandler = (req, res /*, next, options */) => {
+    res.status(429).json({
+        success: false,
+        error: 'Terlalu banyak request, coba lagi nanti'
+    });
+};
+
+const publicPostLimiter = rateLimit({
+    windowMs: RL_PUBLIC_POST_WINDOW_MS,
+    limit: RL_PUBLIC_POST_LIMIT,
+    standardHeaders: 'draft-8',
+    legacyHeaders: false,
+    handler: jsonRateLimitHandler
+});
+
+const publicGetLimiter = rateLimit({
+    windowMs: RL_PUBLIC_GET_WINDOW_MS,
+    limit: RL_PUBLIC_GET_LIMIT,
+    standardHeaders: 'draft-8',
+    legacyHeaders: false,
+    handler: jsonRateLimitHandler
+});
+
+// Rate limit login (anti-bruteforce) - review: dibuat lebih ketat
 const loginLimiter = rateLimit({
     windowMs: 10 * 60 * 1000,
-    limit: 20,
+    limit: Number(process.env.RL_ADMIN_LOGIN_LIMIT || 10),
     standardHeaders: 'draft-8',
-    legacyHeaders: false
+    legacyHeaders: false,
+    handler: jsonRateLimitHandler
 });
+
+// Optional limiter export
+const exportLimiter = rateLimit({
+    windowMs: RL_ADMIN_EXPORT_WINDOW_MS,
+    limit: RL_ADMIN_EXPORT_LIMIT,
+    standardHeaders: 'draft-8',
+    legacyHeaders: false,
+    handler: jsonRateLimitHandler
+});
+
+// ---------------------
+// Validation (Step 4)
+// ---------------------
+function validateRegistrationPayload(body) {
+    const fields = {};
+
+    const tanggalRaw = body?.tanggal;
+    const kodeRaw = body?.kode_jalan;
+    const namaRaw = body?.nama_keluarga;
+    const waRaw = body?.whatsapp;
+
+    const tanggal = parseInt(tanggalRaw, 10);
+    const kode = sanitizeHouseCode(kodeRaw);
+    const nama = sanitizeName(namaRaw);
+    const wa = normalizeWhatsApp(waRaw);
+
+    if (!tanggalRaw) fields.tanggal = 'Tanggal wajib diisi';
+    else if (!isValidDate(tanggal)) fields.tanggal = 'Tanggal harus 1-30';
+
+    if (!kodeRaw) fields.kode_jalan = 'Kode jalan wajib diisi';
+    else if (!HOUSE_CODES.has(kode)) fields.kode_jalan = 'Kode jalan tidak valid';
+
+    if (!namaRaw) fields.nama_keluarga = 'Nama keluarga wajib diisi';
+    else if (nama.length > 60) fields.nama_keluarga = 'Nama keluarga maksimal 60 karakter';
+    else if (nama.length < 2) fields.nama_keluarga = 'Nama keluarga terlalu pendek';
+
+    if (!waRaw) fields.whatsapp = 'WhatsApp wajib diisi';
+    else if (!wa) fields.whatsapp = 'Format WhatsApp tidak valid';
+
+    const ok = Object.keys(fields).length === 0;
+    return ok ? { ok, value: { tanggal, kode_jalan: kode, nama_keluarga: nama, whatsapp: wa } } : { ok, fields };
+}
 
 // ---------------------
 // Routes
@@ -193,8 +385,8 @@ app.get('/api/settings', (req, res) => {
     }
 });
 
-// Admin update settings (protected)
-app.put('/api/settings', requireAdmin, (req, res) => {
+// Admin update settings (protected) + origin soft-check
+app.put('/api/settings', requireAdmin, requireSameOriginSoft, (req, res) => {
     try {
         const { phase2_unlocked, app_title, start_date, admin_password } = req.body || {};
 
@@ -222,6 +414,7 @@ app.put('/api/settings', requireAdmin, (req, res) => {
             newPassHash
         );
 
+        logAudit('admin.settings.update', { ip: req.ip });
         res.json({ success: true });
     } catch (e) {
         console.error('settings put error', e);
@@ -229,7 +422,7 @@ app.put('/api/settings', requireAdmin, (req, res) => {
     }
 });
 
-// Admin login (HttpOnly cookie)
+// Admin login (HttpOnly cookie) + rate limit
 app.post('/api/admin/login', loginLimiter, (req, res) => {
     try {
         const { password } = req.body || {};
@@ -240,20 +433,25 @@ app.post('/api/admin/login', loginLimiter, (req, res) => {
         const stored = row?.admin_password || '';
 
         const ok = bcrypt.compareSync(password, stored);
-        if (!ok) return res.status(401).json({ success: false, error: 'Password salah' });
+        if (!ok) {
+            logAudit('admin.login.fail', { ip: req.ip });
+            return res.status(401).json({ success: false, error: 'Password salah' });
+        }
 
         const token = jwt.sign({ role: 'admin' }, JWT_SECRET, { expiresIn: '2h' });
 
-        // Dynamic Secure cookie: HTTPS only (local HTTP OK, Cloudflare HTTPS OK) [5](https://elementor.com/blog/permission-denied-error-in-docker/)[6](https://stackoverflow.com/questions/40462189/docker-compose-set-user-and-group-on-mounted-volume)
+        // Dynamic Secure cookie: HTTPS only (local HTTP OK, Cloudflare HTTPS OK)
         const isHttps = req.secure || req.get('x-forwarded-proto') === 'https';
 
         res.cookie(ADMIN_COOKIE, token, {
             httpOnly: true,
             secure: isHttps,
             sameSite: 'Strict',
-            maxAge: 2 * 60 * 60 * 1000
+            maxAge: 2 * 60 * 60 * 1000,
+            path: '/'
         });
 
+        logAudit('admin.login.success', { ip: req.ip });
         res.json({ success: true });
     } catch (e) {
         console.error('login error', e);
@@ -265,21 +463,23 @@ app.get('/api/admin/me', requireAdmin, (req, res) => {
     res.json({ success: true, role: 'admin' });
 });
 
-app.post('/api/admin/logout', requireAdmin, (req, res) => {
+app.post('/api/admin/logout', requireAdmin, requireSameOriginSoft, (req, res) => {
     const isHttps = req.secure || req.get('x-forwarded-proto') === 'https';
     res.clearCookie(ADMIN_COOKIE, {
         httpOnly: true,
         secure: isHttps,
-        sameSite: 'Strict'
+        sameSite: 'Strict',
+        path: '/'
     });
+    logAudit('admin.logout', { ip: req.ip });
     res.json({ success: true });
 });
 
 // ================================
 // Step 2: Public registrations (NO WhatsApp / PII)
-// (Prevent Excessive Data Exposure) [1](https://blog.ni18.in/how-to-fix-the-error-while-loading-shared-libraries-in-linux/)[2](https://github.com/WiseLibs/better-sqlite3/issues/943)
+// Step 4: rate limit GET untuk anti-scraping
 // ================================
-app.get('/api/public/registrations', (req, res) => {
+app.get('/api/public/registrations', publicGetLimiter, (req, res) => {
     try {
         const rows = db.prepare(`
       SELECT id, tanggal, kode_jalan, nama_keluarga, created_at
@@ -308,16 +508,13 @@ app.get('/api/registrations', requireAdmin, (req, res) => {
     }
 });
 
-// Create registration (public)
-app.post('/api/registrations', (req, res) => {
+// Create registration (public) + Step 4: rate limit + validation
+app.post('/api/registrations', publicPostLimiter, (req, res) => {
     try {
-        const { tanggal, kode_jalan, nama_keluarga, whatsapp } = req.body || {};
-        if (!tanggal || !kode_jalan || !nama_keluarga || !whatsapp) {
-            return res.status(400).json({ success: false, error: 'Semua field harus diisi' });
-        }
+        const v = validateRegistrationPayload(req.body || {});
+        if (!v.ok) return res.status(400).json(buildValidationError(v.fields));
 
-        const dateNum = parseInt(tanggal, 10);
-        if (!isValidDate(dateNum)) return res.status(400).json({ success: false, error: 'Tanggal harus 1-30' });
+        const { tanggal: dateNum, kode_jalan, nama_keluarga, whatsapp } = v.value;
 
         // phase 2 lock
         if (dateNum > 20) {
@@ -331,18 +528,10 @@ app.post('/api/registrations', (req, res) => {
             return res.status(400).json({ success: false, error: 'Tanggal ini sudah penuh (2 keluarga)' });
         }
 
-        const wa = normalizeWhatsApp(whatsapp);
-        if (!wa) return res.status(400).json({ success: false, error: 'Format WhatsApp tidak valid' });
-
         db.prepare(`
       INSERT INTO registrations (tanggal, kode_jalan, nama_keluarga, whatsapp)
       VALUES (?, ?, ?, ?)
-    `).run(
-            dateNum,
-            String(kode_jalan).trim().toUpperCase(),
-            String(nama_keluarga).trim(),
-            wa
-        );
+    `).run(dateNum, kode_jalan, nama_keluarga, whatsapp);
 
         res.json({ success: true, message: 'Pendaftaran berhasil' });
     } catch (e) {
@@ -351,17 +540,15 @@ app.post('/api/registrations', (req, res) => {
     }
 });
 
-// Admin: update registration (protected)
-app.put('/api/registrations/:id', requireAdmin, (req, res) => {
+// Admin: update registration (protected) + origin soft-check + validation reuse
+app.put('/api/registrations/:id', requireAdmin, requireSameOriginSoft, (req, res) => {
     try {
         const id = parseInt(req.params.id, 10);
-        const { tanggal, kode_jalan, nama_keluarga, whatsapp } = req.body || {};
 
-        const dateNum = parseInt(tanggal, 10);
-        if (!isValidDate(dateNum)) return res.status(400).json({ success: false, error: 'Tanggal harus 1-30' });
+        const v = validateRegistrationPayload(req.body || {});
+        if (!v.ok) return res.status(400).json(buildValidationError(v.fields));
 
-        const wa = normalizeWhatsApp(whatsapp);
-        if (!wa) return res.status(400).json({ success: false, error: 'Format WhatsApp tidak valid' });
+        const { tanggal: dateNum, kode_jalan, nama_keluarga, whatsapp } = v.value;
 
         // max 2 per day excluding this id
         const count = db.prepare('SELECT COUNT(*) as count FROM registrations WHERE tanggal=? AND id!=?').get(dateNum, id);
@@ -373,15 +560,11 @@ app.put('/api/registrations/:id', requireAdmin, (req, res) => {
       UPDATE registrations
       SET tanggal=?, kode_jalan=?, nama_keluarga=?, whatsapp=?
       WHERE id=?
-    `).run(
-            dateNum,
-            String(kode_jalan).trim().toUpperCase(),
-            String(nama_keluarga).trim(),
-            wa,
-            id
-        );
+    `).run(dateNum, kode_jalan, nama_keluarga, whatsapp, id);
 
         if (result.changes === 0) return res.status(404).json({ success: false, error: 'Data tidak ditemukan' });
+
+        logAudit('admin.registration.update', { ip: req.ip, id });
         res.json({ success: true });
     } catch (e) {
         console.error('registrations put error', e);
@@ -389,12 +572,14 @@ app.put('/api/registrations/:id', requireAdmin, (req, res) => {
     }
 });
 
-// Admin: delete registration (protected)
-app.delete('/api/registrations/:id', requireAdmin, (req, res) => {
+// Admin: delete registration (protected) + origin soft-check
+app.delete('/api/registrations/:id', requireAdmin, requireSameOriginSoft, (req, res) => {
     try {
         const id = parseInt(req.params.id, 10);
         const result = db.prepare('DELETE FROM registrations WHERE id=?').run(id);
         if (result.changes === 0) return res.status(404).json({ success: false, error: 'Data tidak ditemukan' });
+
+        logAudit('admin.registration.delete', { ip: req.ip, id });
         res.json({ success: true });
     } catch (e) {
         console.error('registrations delete id error', e);
@@ -402,10 +587,11 @@ app.delete('/api/registrations/:id', requireAdmin, (req, res) => {
     }
 });
 
-// Admin: clear all (protected)
-app.delete('/api/registrations', requireAdmin, (req, res) => {
+// Admin: clear all (protected) + origin soft-check
+app.delete('/api/registrations', requireAdmin, requireSameOriginSoft, (req, res) => {
     try {
         const result = db.prepare('DELETE FROM registrations').run();
+        logAudit('admin.registration.delete_all', { ip: req.ip, deletedCount: result.changes });
         res.json({ success: true, deletedCount: result.changes });
     } catch (e) {
         console.error('registrations delete all error', e);
@@ -413,8 +599,8 @@ app.delete('/api/registrations', requireAdmin, (req, res) => {
     }
 });
 
-// Admin: export CSV (protected) + CSV injection mitigation (already OK)
-app.get('/api/export/csv', requireAdmin, (req, res) => {
+// Admin: export CSV (protected) + origin soft-check + optional limiter
+app.get('/api/export/csv', requireAdmin, requireSameOriginSoft, exportLimiter, (req, res) => {
     try {
         const settings = db.prepare('SELECT start_date FROM settings WHERE id=1').get();
         const startDate = settings?.start_date || null;
@@ -438,7 +624,7 @@ app.get('/api/export/csv', requireAdmin, (req, res) => {
 
         function csvCell(val) {
             const s0 = String(val ?? '');
-            const s = /^[=+\-@\t\r\n]/.test(s0) ? `'${s0}` : s0;
+            const s = /^[=+\-@\t\r\n]/.test(s0) ? `'${s0}` : s0; // CSV injection mitigation
             const escaped = s.replace(/"/g, '""');
             return `"${escaped}"`;
         }
@@ -448,19 +634,22 @@ app.get('/api/export/csv', requireAdmin, (req, res) => {
         lines.push(header.map(csvCell).join(','));
 
         for (const r of rows) {
-            lines.push([
-                calcActualDate(r.tanggal, startDate),
-                r.tanggal,
-                r.nama_keluarga,
-                r.kode_jalan,
-                r.whatsapp,
-                r.created_at
-            ].map(csvCell).join(','));
+            lines.push(
+                [
+                    calcActualDate(r.tanggal, startDate),
+                    r.tanggal,
+                    r.nama_keluarga,
+                    r.kode_jalan,
+                    r.whatsapp,
+                    r.created_at
+                ].map(csvCell).join(',')
+            );
         }
 
         const csv = '\ufeff' + lines.join('\n');
         res.setHeader('Content-Type', 'text/csv; charset=utf-8');
         res.setHeader('Content-Disposition', `attachment; filename=takjil_${new Date().toISOString().slice(0, 10)}.csv`);
+        logAudit('admin.export.csv', { ip: req.ip });
         res.send(csv);
     } catch (e) {
         console.error('export csv error', e);
@@ -486,4 +675,7 @@ app.listen(PORT, '0.0.0.0', () => {
     console.log(`Takjil server running on http://0.0.0.0:${PORT}`);
     console.log(`Frontend dir: ${FRONTEND_DIR}`);
     console.log(`DB: ${DB_PATH}`);
+    console.log(`JSON_LIMIT: ${JSON_LIMIT}`);
+    console.log(`RateLimit public POST: ${RL_PUBLIC_POST_LIMIT}/${RL_PUBLIC_POST_WINDOW_MS / 60000}min`);
+    console.log(`RateLimit public GET: ${RL_PUBLIC_GET_LIMIT}/${RL_PUBLIC_GET_WINDOW_MS / 60000}min`);
 });
