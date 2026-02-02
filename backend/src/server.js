@@ -15,22 +15,26 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+
 const NODE_ENV = process.env.NODE_ENV || 'production';
 const IS_PROD = NODE_ENV === 'production';
 
 const JWT_SECRET = process.env.JWT_SECRET || '';
 const ADMIN_COOKIE = 'takjil_admin';
 
-// Optional: set if you host frontend on different origin
-// Example: CORS_ORIGIN=https://your-domain.example
+// Optional (kalau suatu hari frontend beda domain)
 const CORS_ORIGIN = process.env.CORS_ORIGIN || '';
 
-app.set('trust proxy', 1); // required behind reverse proxies for secure cookies [5](https://docs.docker.com/get-started/docker-concepts/running-containers/sharing-local-files/)[6](https://thomaswildetech.com/blog/2025/07/08/applying-appropriate-file-permissions-on-docker-bind-mounts/)
-app.disable('x-powered-by'); // reduce fingerprinting in production [3](https://stackoverflow.com/questions/75205873/error-nodeinternal-modules-cjs-loader1056-throw-err)[11](https://tutorialreference.com/javascript/examples/faq/javascript-error-cannot-find-module-internal-modules-cjs-loader)
+/**
+ * Behind reverse proxy (Cloudflare Tunnel):
+ * trust proxy diperlukan agar req.secure dan x-forwarded-proto bekerja benar. [5](https://elementor.com/blog/permission-denied-error-in-docker/)
+ */
+app.set('trust proxy', 1);
+app.disable('x-powered-by');
 
 app.use(
     helmet({
-        contentSecurityPolicy: false, // keep off for now (CDN assets); harden later
+        contentSecurityPolicy: false, // CDN assets; CSP kita rapikan nanti (Step lanjutan)
         crossOriginEmbedderPolicy: false
     })
 );
@@ -53,7 +57,6 @@ app.use(cookieParser());
 const frontendPath1 = join(__dirname, '..', 'frontend'); // if server.js is /app/src
 const frontendPath2 = join(__dirname, '..', '..', 'frontend'); // if server.js is /backend/src
 const FRONTEND_DIR = fs.existsSync(frontendPath1) ? frontendPath1 : frontendPath2;
-
 app.use(express.static(FRONTEND_DIR));
 
 // Resolve DB path
@@ -72,7 +75,6 @@ if (!fs.existsSync(dbDir)) fs.mkdirSync(dbDir, { recursive: true });
 function initDatabase() {
     const db = new Database(DB_PATH);
 
-    // Create registrations table
     db.exec(`
     CREATE TABLE IF NOT EXISTS registrations (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -84,7 +86,6 @@ function initDatabase() {
     )
   `);
 
-    // Settings table
     db.exec(`
     CREATE TABLE IF NOT EXISTS settings (
       id INTEGER PRIMARY KEY DEFAULT 1,
@@ -98,7 +99,7 @@ function initDatabase() {
     INSERT OR IGNORE INTO settings (id) VALUES (1);
   `);
 
-    // Ensure start_date exists (in case of older DB)
+    // ensure start_date exists (older DB)
     const cols = db.prepare("PRAGMA table_info('settings')").all();
     const hasStartDate = cols.some((c) => c.name === 'start_date');
     if (!hasStartDate) {
@@ -107,27 +108,23 @@ function initDatabase() {
         } catch (_) { }
     }
 
-    // Helpful indexes
+    // indexes
     db.exec(`
     CREATE INDEX IF NOT EXISTS idx_registrations_tanggal ON registrations(tanggal);
     CREATE INDEX IF NOT EXISTS idx_registrations_created_at ON registrations(created_at);
   `);
 
-    // Migrate admin_password to bcrypt if it is plaintext
     migrateAdminPassword(db);
-
     return db;
 }
 
+// migrate plaintext admin_password -> bcrypt hash (once)
 function migrateAdminPassword(db) {
     const row = db.prepare('SELECT admin_password FROM settings WHERE id=1').get();
     const stored = row?.admin_password || '';
     const looksHashed = /^\$2[aby]\$/.test(stored);
-
-    // If already hashed, do nothing
     if (looksHashed) return;
 
-    // If env ADMIN_PASSWORD exists, use it; otherwise keep stored default
     const source = process.env.ADMIN_PASSWORD || stored || 'takjil2026';
     const hash = bcrypt.hashSync(source, 12);
     db.prepare('UPDATE settings SET admin_password=?, updated_at=CURRENT_TIMESTAMP WHERE id=1').run(hash);
@@ -163,7 +160,7 @@ function requireAdmin(req, res, next) {
     }
 }
 
-// Rate limit login (anti-bruteforce) [7](https://github.com/WiseLibs/better-sqlite3/discussions/1270)[8](https://answers.netlify.com/t/better-sqlite3-no-longer-installing/142578)
+// Rate limit login (anti-bruteforce)
 const loginLimiter = rateLimit({
     windowMs: 10 * 60 * 1000,
     limit: 20,
@@ -175,7 +172,7 @@ const loginLimiter = rateLimit({
 // Routes
 // ---------------------
 
-// Public settings (never include admin_password)
+// Public settings (NO admin_password)
 app.get('/api/settings', (req, res) => {
     try {
         const row = db.prepare(`
@@ -232,7 +229,7 @@ app.put('/api/settings', requireAdmin, (req, res) => {
     }
 });
 
-// Admin login (sets HttpOnly cookie) [1](https://github.com/WiseLibs/better-sqlite3/blob/master/docs/troubleshooting.md)[2](https://www.npmjs.com/package/better-sqlite3)
+// Admin login (HttpOnly cookie)
 app.post('/api/admin/login', loginLimiter, (req, res) => {
     try {
         const { password } = req.body || {};
@@ -247,10 +244,13 @@ app.post('/api/admin/login', loginLimiter, (req, res) => {
 
         const token = jwt.sign({ role: 'admin' }, JWT_SECRET, { expiresIn: '2h' });
 
+        // Dynamic Secure cookie: HTTPS only (local HTTP OK, Cloudflare HTTPS OK) [5](https://elementor.com/blog/permission-denied-error-in-docker/)[6](https://stackoverflow.com/questions/40462189/docker-compose-set-user-and-group-on-mounted-volume)
+        const isHttps = req.secure || req.get('x-forwarded-proto') === 'https';
+
         res.cookie(ADMIN_COOKIE, token, {
             httpOnly: true,
-            secure: IS_PROD,          // keep true in production (HTTPS)
-            sameSite: 'Strict',       // helps mitigate CSRF
+            secure: isHttps,
+            sameSite: 'Strict',
             maxAge: 2 * 60 * 60 * 1000
         });
 
@@ -266,16 +266,36 @@ app.get('/api/admin/me', requireAdmin, (req, res) => {
 });
 
 app.post('/api/admin/logout', requireAdmin, (req, res) => {
+    const isHttps = req.secure || req.get('x-forwarded-proto') === 'https';
     res.clearCookie(ADMIN_COOKIE, {
         httpOnly: true,
-        secure: IS_PROD,
+        secure: isHttps,
         sameSite: 'Strict'
     });
     res.json({ success: true });
 });
 
-// Public registrations (⚠️ Step 2 will remove whatsapp from public)
-app.get('/api/registrations', (req, res) => {
+// ================================
+// Step 2: Public registrations (NO WhatsApp / PII)
+// (Prevent Excessive Data Exposure) [1](https://blog.ni18.in/how-to-fix-the-error-while-loading-shared-libraries-in-linux/)[2](https://github.com/WiseLibs/better-sqlite3/issues/943)
+// ================================
+app.get('/api/public/registrations', (req, res) => {
+    try {
+        const rows = db.prepare(`
+      SELECT id, tanggal, kode_jalan, nama_keluarga, created_at
+      FROM registrations
+      ORDER BY tanggal ASC, created_at ASC
+    `).all();
+
+        res.json({ success: true, data: rows });
+    } catch (e) {
+        console.error('public registrations get error', e);
+        res.status(500).json({ success: false, error: 'Internal server error' });
+    }
+});
+
+// Admin registrations (WITH WhatsApp) - protected
+app.get('/api/registrations', requireAdmin, (req, res) => {
     try {
         const rows = db.prepare(`
       SELECT * FROM registrations
@@ -283,7 +303,7 @@ app.get('/api/registrations', (req, res) => {
     `).all();
         res.json({ success: true, data: rows });
     } catch (e) {
-        console.error('registrations get error', e);
+        console.error('admin registrations get error', e);
         res.status(500).json({ success: false, error: 'Internal server error' });
     }
 });
@@ -393,7 +413,7 @@ app.delete('/api/registrations', requireAdmin, (req, res) => {
     }
 });
 
-// Admin: export CSV (protected) with OWASP CSV injection mitigation [9](https://github.com/WiseLibs/better-sqlite3/issues/1326)[10](https://github.com/WiseLibs/better-sqlite3/issues/943)
+// Admin: export CSV (protected) + CSV injection mitigation (already OK)
 app.get('/api/export/csv', requireAdmin, (req, res) => {
     try {
         const settings = db.prepare('SELECT start_date FROM settings WHERE id=1').get();
@@ -416,7 +436,6 @@ app.get('/api/export/csv', requireAdmin, (req, res) => {
             return `${mm}/${dd}/${yyyy}`;
         }
 
-        // CSV escape + formula injection mitigation (prefix dangerous starters) [9](https://github.com/WiseLibs/better-sqlite3/issues/1326)[10](https://github.com/WiseLibs/better-sqlite3/issues/943)
         function csvCell(val) {
             const s0 = String(val ?? '');
             const s = /^[=+\-@\t\r\n]/.test(s0) ? `'${s0}` : s0;

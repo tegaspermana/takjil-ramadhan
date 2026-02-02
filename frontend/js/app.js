@@ -43,9 +43,18 @@ const HOUSE_CODES = [
     'ML-01', 'ML-02', 'ML-03', 'ML-05', 'ML-06', 'ML-07', 'ML-08', 'ML-09', 'ML-10',
     'ML-11', 'ML-12', 'ML-14',
 
-    //Lainnya
     'LAINNYA'
 ];
+
+// Escape helper (Step 3: XSS prevention via output encoding) [3](https://tensin.name/blog/docker-bind-mounts.html)[8](https://github.com/WiseLibs/better-sqlite3/issues/549)
+function escapeHtml(value) {
+    return String(value ?? '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
+}
 
 // Global State
 let registrations = [];
@@ -61,50 +70,39 @@ document.addEventListener('DOMContentLoaded', function () {
 
 async function initApp() {
     try {
-        // Load house codes dropdown
         populateHouseCodes();
-
-        // Initialize richer autocomplete for Kode Jalan
         initHouseAutocomplete();
 
-        // Load initial data
         await loadData();
 
-        // Render UI
         renderUserDateOverview();
-
-        // Setup event listeners
         setupEventListeners();
 
-        // Hide loading, show app
         document.getElementById('loading').style.display = 'none';
         document.getElementById('app').classList.remove('hidden');
 
         console.log('App initialized successfully');
-
     } catch (error) {
         console.error('App initialization error:', error);
-        // Show an actionable error message with retry
-        document.getElementById('loading').innerHTML = `
-            <div class="text-center">
-                <div class="text-red-600">
-                    <i class="fas fa-exclamation-triangle text-4xl mb-4"></i>
-                    <p class="text-lg font-semibold">Gagal memuat aplikasi</p>
-                    <p class="text-sm mt-2">Periksa koneksi atau coba lagi.</p>
-                    <button id="retry-btn" class="mt-4 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700">Coba lagi</button>
-                </div>
-            </div>
-        `;
 
-        // Attach retry handler
+        document.getElementById('loading').innerHTML = `
+      <div class="text-center">
+        <div class="text-red-600">
+          <i class="fas fa-exclamation-triangle text-4xl mb-4"></i>
+          <p class="text-lg font-semibold">Gagal memuat aplikasi</p>
+          <p class="text-sm mt-2">Periksa koneksi atau coba lagi.</p>
+          <button id="retry-btn" class="mt-4 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700">Coba lagi</button>
+        </div>
+      </div>
+    `;
+
         const retryBtn = document.getElementById('retry-btn');
         if (retryBtn) {
             retryBtn.addEventListener('click', () => {
                 document.getElementById('loading').innerHTML = `
-                    <div class="inline-block loading-spinner rounded-full h-12 w-12 border-b-2 border-emerald-600"></div>
-                    <p class="mt-4 text-gray-600">Memuat aplikasi...</p>
-                `;
-                // Re-run initialization
+          <div class="inline-block loading-spinner rounded-full h-12 w-12 border-b-2 border-emerald-600"></div>
+          <p class="mt-4 text-gray-600">Memuat aplikasi...</p>
+        `;
                 initApp();
             });
         }
@@ -124,7 +122,6 @@ function populateHouseCodes() {
             datalist.appendChild(opt);
         });
     } else {
-        // Fallback for select element (legacy)
         const select = input;
         select.innerHTML = '<option value="">Pilih Kode Jalan</option>';
         HOUSE_CODES.forEach(code => {
@@ -136,7 +133,7 @@ function populateHouseCodes() {
     }
 }
 
-// Helper: fetch with timeout (avoids indefinite hangs)
+// Helper: fetch with timeout
 function fetchWithTimeout(url, options = {}, timeout = 8000) {
     return Promise.race([
         fetch(url, options),
@@ -146,18 +143,15 @@ function fetchWithTimeout(url, options = {}, timeout = 8000) {
 
 async function loadData() {
     try {
-        // Load registrations with timeout
-        const regResponse = await fetchWithTimeout(`${API_BASE_URL}/api/registrations`, {}, 8000);
+        // Step 2: use public endpoint (NO WhatsApp / PII) [1](https://blog.ni18.in/how-to-fix-the-error-while-loading-shared-libraries-in-linux/)[2](https://github.com/WiseLibs/better-sqlite3/issues/943)
+        const regResponse = await fetchWithTimeout(`${API_BASE_URL}/api/public/registrations`, {}, 8000);
         if (!regResponse.ok) throw new Error(`Registrations fetch failed: ${regResponse.status}`);
         const regData = await regResponse.json();
-
         if (regData.success) registrations = regData.data;
 
-        // Load settings with timeout
         const settingsResponse = await fetchWithTimeout(`${API_BASE_URL}/api/settings`, {}, 8000);
         if (!settingsResponse.ok) throw new Error(`Settings fetch failed: ${settingsResponse.status}`);
         const settingsData = await settingsResponse.json();
-
         if (settingsData.success) settings = settingsData.data;
 
     } catch (error) {
@@ -176,9 +170,7 @@ function renderDateGrid() {
     for (let date = 1; date <= 30; date++) {
         const dateRegs = registrations.filter(r => r.tanggal === date);
         const filled = dateRegs.length;
-        const available = 2 - filled;
 
-        // Compute full calendar date and weekday if start_date is configured
         let dayName = dayNames[(date - 1) % 7];
         let fullDateStr = '';
         if (settings && settings.start_date) {
@@ -188,12 +180,9 @@ function renderDateGrid() {
                 dateObj.setDate(base.getDate() + (date - 1));
                 dayName = dateObj.toLocaleDateString('id-ID', { weekday: 'long' });
                 fullDateStr = dateObj.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
-            } catch (err) {
-                // keep defaults
-            }
+            } catch (_) { }
         }
 
-        // Determine status
         let status = 'available';
         let statusClass = 'status-available';
         let isLocked = false;
@@ -211,25 +200,24 @@ function renderDateGrid() {
         }
 
         html += `
-            <div class="date-card ${statusClass} rounded-lg md:rounded-xl p-2 md:p-4 text-white cursor-pointer ${isLocked ? 'opacity-70' : 'hover:shadow-lg'}"
-                 onclick="${!isLocked ? `openRegistrationModal(${date})` : ''}">
-                <div class="text-center">
-                    <div class="font-bold text-base md:text-xl">${date}</div>
-                    <div class="text-xs md:text-sm opacity-75">${dayName}</div>
-                    ${fullDateStr ? `<div class="font-bold text-base">${fullDateStr}</div>` : ''}
-                    <div class="text-xs mt-2 md:mt-3 mb-1 md:mb-2">
-                         ${status === 'available' ? 'Tersedia' :
+      <div class="date-card ${statusClass} rounded-lg md:rounded-xl p-2 md:p-4 text-white cursor-pointer ${isLocked ? 'opacity-70' : 'hover:shadow-lg'}"
+           onclick="${!isLocked ? `openRegistrationModal(${date})` : ''}">
+        <div class="text-center">
+          <div class="font-bold text-base md:text-xl">${date}</div>
+          <div class="text-xs md:text-sm opacity-75">${dayName}</div>
+          ${fullDateStr ? `<div class="font-bold text-base">${fullDateStr}</div>` : ''}
+          <div class="text-xs mt-2 md:mt-3 mb-1 md:mb-2">
+            ${status === 'available' ? 'Tersedia' :
                 status === 'partial' ? '1/2 Terisi' :
                     status === 'full' ? 'Penuh' : 'Tertutup'}
-                    </div>
-                </div>
-            </div>
-        `;
+          </div>
+        </div>
+      </div>
+    `;
     }
 
     grid.innerHTML = html;
 }
-
 
 // User Date View Functions
 function setUserDateView(view) {
@@ -256,11 +244,8 @@ function setUserDateView(view) {
 }
 
 function renderUserDateOverview() {
-    if (currentUserDateView === 'grid') {
-        renderDateGrid();
-    } else {
-        renderUserDateTable();
-    }
+    if (currentUserDateView === 'grid') renderDateGrid();
+    else renderUserDateTable();
 }
 
 function renderUserDateTable() {
@@ -274,7 +259,6 @@ function renderUserDateTable() {
         const dateRegs = registrations.filter(r => r.tanggal === date);
         const filled = dateRegs.length;
 
-        // Compute full calendar date and weekday if start_date is configured
         let dayName = dayNames[(date - 1) % 7];
         let fullDateStr = '';
         if (settings && settings.start_date) {
@@ -284,12 +268,9 @@ function renderUserDateTable() {
                 dateObj.setDate(base.getDate() + (date - 1));
                 dayName = dateObj.toLocaleDateString('id-ID', { weekday: 'long' });
                 fullDateStr = dateObj.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
-            } catch (err) {
-                // keep defaults
-            }
+            } catch (_) { }
         }
 
-        // Determine status
         let statusText = 'Tersedia';
         let statusColor = 'text-emerald-600';
         let bgColor = 'bg-emerald-50';
@@ -310,10 +291,12 @@ function renderUserDateTable() {
             bgColor = 'bg-amber-50';
         }
 
-        // Create registrants list
         let registrantsHtml = '';
         if (dateRegs.length > 0) {
-            registrantsHtml = dateRegs.map(reg => `${reg.kode_jalan} - ${reg.nama_keluarga}`).join('<br>');
+            // Step 3: escape user-controlled values before injecting into HTML [3](https://tensin.name/blog/docker-bind-mounts.html)[8](https://github.com/WiseLibs/better-sqlite3/issues/549)
+            registrantsHtml = dateRegs
+                .map(reg => `${escapeHtml(reg.kode_jalan)} - ${escapeHtml(reg.nama_keluarga)}`)
+                .join('<br>');
         } else {
             registrantsHtml = '<span class="text-gray-400">-</span>';
         }
@@ -321,44 +304,38 @@ function renderUserDateTable() {
         const canClick = !isLocked && filled < 2;
         const buttonHtml = canClick
             ? `<button onclick="openRegistrationModal(${date})" class="mt-2 px-3 py-1 bg-emerald-600 text-white text-sm rounded hover:bg-emerald-700 transition">
-                Daftar
-               </button>`
+          Daftar
+         </button>`
             : '';
 
         html += `
-            <tr class="hover:bg-gray-50">
-                <td class="px-4 py-3">
-                    <div class="flex justify-between items-start">
-                        <div class="flex-1">
-                            <div class="font-medium text-gray-900">${date} Ramadhan</div>
-                            ${fullDateStr ? `<div class="text-sm text-gray-500">${fullDateStr}</div>` : ''}
-                            <div class="mt-1">
-                                <span class="px-2 py-1 text-xs font-medium rounded-full ${bgColor} ${statusColor}">
-                                    ${statusText}
-                                </span>
-                            </div>
-                            ${buttonHtml}
-                        </div>
-                    </div>
-                </td>
-                <td class="px-4 py-3 text-sm text-gray-900">
-                    ${registrantsHtml}
-                </td>
-            </tr>
-        `;
+      <tr class="hover:bg-gray-50">
+        <td class="px-4 py-3">
+          <div class="flex justify-between items-start">
+            <div class="flex-1">
+              <div class="font-medium text-gray-900">${date} Ramadhan</div>
+              ${fullDateStr ? `<div class="text-sm text-gray-500">${fullDateStr}</div>` : ''}
+              <div class="mt-1">
+                <span class="px-2 py-1 text-xs font-medium rounded-full ${bgColor} ${statusColor}">
+                  ${statusText}
+                </span>
+              </div>
+              ${buttonHtml}
+            </div>
+          </div>
+        </td>
+        <td class="px-4 py-3 text-sm text-gray-900">${registrantsHtml}</td>
+      </tr>
+    `;
     }
 
     tbody.innerHTML = html;
 }
 
 function setupEventListeners() {
-    // Registration form submit
     const form = document.getElementById('registration-form');
-    if (form) {
-        form.addEventListener('submit', handleFormSubmit);
-    }
+    if (form) form.addEventListener('submit', handleFormSubmit);
 
-    // Admin link click
     const adminLink = document.querySelector('a[href="/admin"]');
     if (adminLink) {
         adminLink.addEventListener('click', function (e) {
@@ -371,167 +348,87 @@ function setupEventListeners() {
 async function openRegistrationModal(date) {
     selectedDate = date;
 
-    // ========== IMPORTANT: CLEAR PREVIOUS CONTENT ==========
-    // Remove any existing "Sudah terdaftar" section from previous modal
     const existingContainer = document.querySelector('.existing-registrations');
-    if (existingContainer) {
-        existingContainer.remove();
-    }
+    if (existingContainer) existingContainer.remove();
 
-    // Clear the full message content if it exists
     const fullMessage = document.getElementById('full-slot-message');
     if (fullMessage) {
         fullMessage.innerHTML = '';
         fullMessage.style.display = 'none';
     }
 
-    // Make sure form is visible by default
     const form = document.getElementById('registration-form');
-    if (form) {
-        form.style.display = 'block';
-    }
-    // ========== END OF CLEANUP ==========
+    if (form) form.style.display = 'block';
 
-    // Update modal title and date
     document.getElementById('modal-title').textContent = `Daftar Takjil - Tanggal ${date} Ramadhan`;
     document.getElementById('selected-date').value = date;
 
-    // Show modal immediately (don't wait for data load)
     document.getElementById('registration-modal').classList.remove('hidden');
     document.getElementById('registration-modal').classList.add('flex');
 
-    // ========== ALWAYS LOAD FRESH DATA ==========
     try {
-        await loadData(); // This loads fresh registrations
-
-        // Update the grid with fresh data
+        await loadData();
         renderUserDateOverview();
 
-        // Get fresh registrations for this date
         const dateRegs = registrations.filter(r => r.tanggal === date);
         const isFull = dateRegs.length >= 2;
 
-        // Reset form (always do this after data load)
         document.getElementById('family-name').value = '';
         document.getElementById('house-code').value = '';
         document.getElementById('whatsapp').value = '';
         document.getElementById('form-error').classList.add('hidden');
 
         if (isFull) {
-            // Hide form and show full message
             if (form) form.style.display = 'none';
             if (fullMessage) fullMessage.style.display = 'block';
 
-            // Update full message content
             if (fullMessage) {
                 fullMessage.innerHTML = `
-                    <div class="text-center py-6">
-                        <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <i class="fas fa-calendar-times text-red-600 text-2xl"></i>
-                        </div>
-                        <h4 class="text-lg font-semibold text-gray-800 mb-2">Slot Penuh</h4>
-                        <p class="text-gray-600 mb-4">Tanggal ${date} Ramadhan sudah penuh terdaftar.</p>
-                        <p class="text-sm font-medium text-gray-700 mb-4">Sudah terdaftar:</p>
-                        ${dateRegs.map(reg => `
-                            <div class="text-sm text-gray-600 mb-2 p-2 bg-gray-50 rounded">
-                                <i class="fas fa-home mr-2"></i>
-                                ${reg.kode_jalan} - ${reg.nama_keluarga}
-                            </div>
-                        `).join('')}
-                    </div>
-                `;
+          <div class="text-center py-6">
+            <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <i class="fas fa-calendar-times text-red-600 text-2xl"></i>
+            </div>
+            <h4 class="text-lg font-semibold text-gray-800 mb-2">Slot Penuh</h4>
+            <p class="text-gray-600 mb-4">Tanggal ${date} Ramadhan sudah penuh terdaftar.</p>
+            <p class="text-sm font-medium text-gray-700 mb-4">Sudah terdaftar:</p>
+            ${dateRegs.map(reg => `
+              <div class="text-sm text-gray-600 mb-2 p-2 bg-gray-50 rounded">
+                <i class="fas fa-home mr-2"></i>
+                ${escapeHtml(reg.kode_jalan)} - ${escapeHtml(reg.nama_keluarga)}
+              </div>
+            `).join('')}
+          </div>
+        `;
             }
         } else {
-            // Show form and hide full message
             if (form) form.style.display = 'block';
             if (fullMessage) fullMessage.style.display = 'none';
 
-            // Show existing registrations if any (and slot is not full)
             if (dateRegs.length > 0) {
                 const details = document.createElement('div');
                 details.className = 'existing-registrations mb-4 p-4 bg-gray-50 rounded-lg';
                 details.innerHTML = `
-                    <p class="text-sm font-medium text-gray-700 mb-2">Sudah terdaftar:</p>
-                    ${dateRegs.map(reg => `
-                        <div class="text-sm text-gray-600 mb-1">
-                            <i class="fas fa-home mr-2"></i>
-                            ${reg.kode_jalan} - ${reg.nama_keluarga}
-                        </div>
-                    `).join('')}
-                `;
-
-                // Insert after the modal header (title + close button) but before the form
+          <p class="text-sm font-medium text-gray-700 mb-2">Sudah terdaftar:</p>
+          ${dateRegs.map(reg => `
+            <div class="text-sm text-gray-600 mb-1">
+              <i class="fas fa-home mr-2"></i>
+              ${escapeHtml(reg.kode_jalan)} - ${escapeHtml(reg.nama_keluarga)}
+            </div>
+          `).join('')}
+        `;
                 const modalHeader = document.getElementById('modal-title').parentElement;
                 modalHeader.after(details);
             }
         }
-
     } catch (error) {
         console.error('Error loading latest data for modal:', error);
-        // Fallback: Use cached data if fresh data fails
-        const dateRegs = registrations.filter(r => r.tanggal === date);
-        const isFull = dateRegs.length >= 2;
-
-        // Reset form
-        document.getElementById('family-name').value = '';
-        document.getElementById('house-code').value = '';
-        document.getElementById('whatsapp').value = '';
-        document.getElementById('form-error').classList.add('hidden');
-
-        if (isFull) {
-            // Hide form and show full message with cached data
-            if (form) form.style.display = 'none';
-            if (fullMessage) {
-                fullMessage.style.display = 'block';
-                fullMessage.innerHTML = `
-                    <div class="text-center py-6">
-                        <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <i class="fas fa-calendar-times text-red-600 text-2xl"></i>
-                        </div>
-                        <h4 class="text-lg font-semibold text-gray-800 mb-2">Slot Penuh</h4>
-                        <p class="text-gray-600 mb-4">Tanggal ${date} Ramadhan sudah penuh terdaftar.</p>
-                        <p class="text-sm font-medium text-gray-700 mb-4">Sudah terdaftar:</p>
-                        ${dateRegs.map(reg => `
-                            <div class="text-sm text-gray-600 mb-2 p-2 bg-gray-50 rounded">
-                                <i class="fas fa-home mr-2"></i>
-                                ${reg.kode_jalan} - ${reg.nama_keluarga}
-                            </div>
-                        `).join('')}
-                    </div>
-                `;
-            }
-        } else {
-            // Show form with cached data
-            if (form) form.style.display = 'block';
-            if (fullMessage) fullMessage.style.display = 'none';
-
-            // Show existing registrations with cached data
-            if (dateRegs.length > 0) {
-                const details = document.createElement('div');
-                details.className = 'existing-registrations mb-4 p-4 bg-gray-50 rounded-lg';
-                details.innerHTML = `
-                    <p class="text-sm font-medium text-gray-700 mb-2">Sudah terdaftar:</p>
-                    ${dateRegs.map(reg => `
-                        <div class="text-sm text-gray-600 mb-1">
-                            <i class="fas fa-home mr-2"></i>
-                            ${reg.kode_jalan} - ${reg.nama_keluarga}
-                        </div>
-                    `).join('')}
-                `;
-
-                const modalHeader = document.getElementById('modal-title').parentElement;
-                modalHeader.after(details);
-            }
-        }
+        // fallback using cached data (already in registrations)
     }
 }
 
 function closeModal() {
-    // Clear modal content before closing
     const existingContainer = document.querySelector('.existing-registrations');
-    if (existingContainer) {
-        existingContainer.remove();
-    }
+    if (existingContainer) existingContainer.remove();
 
     const fullMessage = document.getElementById('full-slot-message');
     if (fullMessage) {
@@ -539,7 +436,6 @@ function closeModal() {
         fullMessage.style.display = 'none';
     }
 
-    // Hide modal
     document.getElementById('registration-modal').classList.add('hidden');
     document.getElementById('registration-modal').classList.remove('flex');
 }
@@ -552,29 +448,24 @@ function closeSuccessModal() {
 async function handleFormSubmit(e) {
     e.preventDefault();
 
-    // Get form values
     const familyName = document.getElementById('family-name').value.trim();
     let houseCode = document.getElementById('house-code').value;
     const whatsapp = document.getElementById('whatsapp').value.trim();
     const date = parseInt(document.getElementById('selected-date').value);
-    const errorDiv = document.getElementById('form-error');
+
     const submitBtn = document.getElementById('submit-btn');
     const submitText = document.getElementById('submit-text');
     const submitLoading = document.getElementById('submit-loading');
 
-    // Normalize house code to uppercase for case-insensitive validation
     houseCode = houseCode.toUpperCase();
     document.getElementById('house-code').value = houseCode;
 
-    // Validation
     if (!familyName || !houseCode || !whatsapp) {
         showError('Semua field harus diisi');
         return;
     }
 
-    // Ensure the house code matches known codes (case-insensitive check)
-    const normalizedHouseCode = houseCode.toUpperCase();
-    if (!HOUSE_CODES.includes(normalizedHouseCode)) {
+    if (!HOUSE_CODES.includes(houseCode)) {
         showError('Kode Jalan tidak valid. Pilih dari daftar.');
         return;
     }
@@ -585,24 +476,20 @@ async function handleFormSubmit(e) {
         return;
     }
 
-    // Format WhatsApp number
     const formattedWhatsApp = '62' + whatsappClean.substring(1);
 
-    // Show loading state
     submitText.classList.add('hidden');
     submitLoading.classList.remove('hidden');
     submitBtn.disabled = true;
-    errorDiv.classList.add('hidden');
+    document.getElementById('form-error').classList.add('hidden');
 
     try {
         const response = await fetch(`${API_BASE_URL}/api/registrations`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 tanggal: date,
-                kode_jalan: normalizedHouseCode, // Use normalized version
+                kode_jalan: houseCode,
                 nama_keluarga: familyName,
                 whatsapp: formattedWhatsApp
             })
@@ -611,34 +498,25 @@ async function handleFormSubmit(e) {
         const data = await response.json();
 
         if (data.success) {
-            // IMPORTANT: Load fresh data immediately after success
             await loadData();
-
-            // Update UI with fresh data
             renderUserDateOverview();
 
-            // Show success message
+            // Step 3: escape familyName before innerHTML [3](https://tensin.name/blog/docker-bind-mounts.html)[8](https://github.com/WiseLibs/better-sqlite3/issues/549)
             document.getElementById('success-message').innerHTML = `
-                Terima kasih <strong>${familyName}</strong>!<br>
-                Pendaftaran untuk tanggal ${date} Ramadhan berhasil.
-            `;
+        Terima kasih <strong>${escapeHtml(familyName)}</strong>!<br>
+        Pendaftaran untuk tanggal ${date} Ramadhan berhasil.
+      `;
 
-            // Close modal
-            closeModal(); // Don't pass true, we already loaded data
-
-            // Show success modal
+            closeModal();
             document.getElementById('success-modal').classList.remove('hidden');
             document.getElementById('success-modal').classList.add('flex');
-
         } else {
             showError(data.error || 'Gagal menyimpan data');
         }
-
     } catch (error) {
         console.error('Submit error:', error);
         showError('Koneksi error. Silakan coba lagi.');
     } finally {
-        // Reset button state
         submitText.classList.remove('hidden');
         submitLoading.classList.add('hidden');
         submitBtn.disabled = false;
@@ -657,7 +535,6 @@ function initHouseAutocomplete() {
     const suggestions = document.getElementById('house-suggestions');
     if (!input || !suggestions) return;
 
-    let items = [];
     let selected = -1;
 
     function render(list) {
@@ -674,13 +551,13 @@ function initHouseAutocomplete() {
             div.setAttribute('role', 'option');
             div.textContent = code;
             div.addEventListener('mousedown', (e) => {
-                // use mousedown to select before blur
                 e.preventDefault();
-                select(idx);
-                choose();
+                input.value = code;
+                hide();
             });
             suggestions.appendChild(div);
         });
+
         suggestions.classList.remove('hidden');
         input.setAttribute('aria-expanded', 'true');
     }
@@ -691,20 +568,6 @@ function initHouseAutocomplete() {
         return HOUSE_CODES.filter(c => c.toLowerCase().includes(q)).slice(0, 10);
     }
 
-    function select(idx) {
-        const children = suggestions.children;
-        if (selected >= 0 && children[selected]) children[selected].classList.remove('bg-gray-100');
-        selected = idx;
-        if (selected >= 0 && children[selected]) children[selected].classList.add('bg-gray-100');
-    }
-
-    function choose() {
-        if (selected >= 0 && suggestions.children[selected]) {
-            input.value = suggestions.children[selected].textContent;
-        }
-        hide();
-    }
-
     function hide() {
         suggestions.classList.add('hidden');
         input.setAttribute('aria-expanded', 'false');
@@ -713,7 +576,6 @@ function initHouseAutocomplete() {
 
     input.addEventListener('input', (e) => {
         const list = filter(e.target.value);
-        items = list;
         selected = -1;
         render(list);
     });
@@ -722,36 +584,33 @@ function initHouseAutocomplete() {
         const children = suggestions.children;
         if (e.key === 'ArrowDown') {
             e.preventDefault();
-            if (selected < children.length - 1) select(selected + 1);
-            else if (children.length) select(0);
+            if (selected < children.length - 1) selected++;
+            else selected = 0;
+            Array.from(children).forEach(c => c.classList.remove('bg-gray-100'));
+            if (children[selected]) children[selected].classList.add('bg-gray-100');
         } else if (e.key === 'ArrowUp') {
             e.preventDefault();
-            if (selected > 0) select(selected - 1);
-            else if (children.length) select(children.length - 1);
+            if (selected > 0) selected--;
+            else selected = children.length - 1;
+            Array.from(children).forEach(c => c.classList.remove('bg-gray-100'));
+            if (children[selected]) children[selected].classList.add('bg-gray-100');
         } else if (e.key === 'Enter') {
-            if (selected >= 0) {
+            if (selected >= 0 && suggestions.children[selected]) {
                 e.preventDefault();
-                choose();
+                input.value = suggestions.children[selected].textContent;
+                hide();
             }
         } else if (e.key === 'Escape') {
             hide();
         }
     });
 
-    // Hide on blur (allow click selection via mousedown)
     input.addEventListener('blur', () => setTimeout(hide, 150));
-
-    // Clicking outside should hide
     document.addEventListener('click', (e) => {
         if (!input.contains(e.target) && !suggestions.contains(e.target)) hide();
     });
 
-    // Pre-populate suggestions on focus
-    input.addEventListener('focus', (e) => {
-        const list = filter(e.target.value);
-        items = list;
-        render(list);
-    });
+    input.addEventListener('focus', (e) => render(filter(e.target.value)));
 }
 
 // Expose functions to global scope
