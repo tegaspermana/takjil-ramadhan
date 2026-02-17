@@ -191,10 +191,10 @@ function renderDateGrid() {
             status = 'locked';
             statusClass = 'status-locked';
             isLocked = true;
-        } else if (filled === 2) {
+        } else if (filled === 4) {
             status = 'full';
             statusClass = 'status-full';
-        } else if (filled === 1) {
+        } else if (filled >= 1 && filled < 4) {
             status = 'partial';
             statusClass = 'status-partial';
         }
@@ -208,7 +208,7 @@ function renderDateGrid() {
           ${fullDateStr ? `<div class="font-bold text-base">${fullDateStr}</div>` : ''}
           <div class="text-xs mt-2 md:mt-3 mb-1 md:mb-2">
             ${status === 'available' ? 'Tersedia' :
-                status === 'partial' ? '1/2 Terisi' :
+                status === 'partial' ? `${filled}/4 Terisi` :
                     status === 'full' ? 'Penuh' : 'Tertutup'}
           </div>
         </div>
@@ -281,12 +281,12 @@ function renderUserDateTable() {
             statusColor = 'text-gray-600';
             bgColor = 'bg-gray-50';
             isLocked = true;
-        } else if (filled === 2) {
+        } else if (filled === 4) {
             statusText = 'Penuh';
             statusColor = 'text-red-600';
             bgColor = 'bg-red-50';
-        } else if (filled === 1) {
-            statusText = '1/2 Terisi';
+        } else if (filled >= 1 && filled < 4) {
+            statusText = `${filled}/4 Terisi`;
             statusColor = 'text-amber-600';
             bgColor = 'bg-amber-50';
         }
@@ -301,7 +301,7 @@ function renderUserDateTable() {
             registrantsHtml = '<span class="text-gray-400">-</span>';
         }
 
-        const canClick = !isLocked && filled < 2;
+        const canClick = !isLocked && filled < 4;
         const buttonHtml = canClick
             ? `<button onclick="openRegistrationModal(${date})" class="mt-2 px-3 py-1 bg-emerald-600 text-white text-sm rounded hover:bg-emerald-700 transition">
           Daftar
@@ -371,7 +371,7 @@ async function openRegistrationModal(date) {
         renderUserDateOverview();
 
         const dateRegs = registrations.filter(r => r.tanggal === date);
-        const isFull = dateRegs.length >= 2;
+        const isFull = dateRegs.length >= 4;
 
         document.getElementById('family-name').value = '';
         document.getElementById('house-code').value = '';

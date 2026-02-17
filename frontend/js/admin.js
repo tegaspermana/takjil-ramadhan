@@ -197,7 +197,7 @@ function renderTable() {
         pageData.forEach((reg, index) => {
             const rowNumber = startIndex + index + 1;
             const dateRegs = registrations.filter(r => r.tanggal === reg.tanggal);
-            const status = dateRegs.length >= 2 ? 'full' : dateRegs.length === 1 ? 'partial' : 'available';
+            const status = dateRegs.length >= 4 ? 'full' : dateRegs.length >= 1 ? 'partial' : 'available';
 
             let dayName = '';
             let fullDateStr = '';
@@ -232,7 +232,7 @@ function renderTable() {
         </td>
         <td class="px-6 py-4 whitespace-nowrap">
           <span class="status-badge status-${status}">
-            ${status === 'available' ? 'Tersedia' : status === 'partial' ? '1/2 Terisi' : 'Penuh'}
+            ${status === 'available' ? 'Tersedia' : status === 'partial' ? `${dateRegs.length}/4 Terisi` : 'Penuh'}
           </span>
         </td>
         <td class="px-6 py-4 whitespace-nowrap">
@@ -646,10 +646,10 @@ function renderDateGrid() {
             status = 'locked';
             statusClass = 'status-locked';
             isLocked = true;
-        } else if (filled === 2) {
+        } else if (filled === 4) {
             status = 'full';
             statusClass = 'status-full';
-        } else if (filled === 1) {
+        } else if (filled >= 1 && filled < 4) {
             status = 'partial';
             statusClass = 'status-partial';
         }
@@ -701,12 +701,12 @@ function renderDateTable() {
             statusClass = 'table-status-locked';
             statusText = 'Tertutup';
             isLocked = true;
-        } else if (filled === 2) {
+        } else if (filled === 4) {
             statusClass = 'table-status-full';
             statusText = 'Penuh';
-        } else if (filled === 1) {
+        } else if (filled >= 1 && filled < 4) {
             statusClass = 'table-status-partial';
-            statusText = '1/2 Terisi';
+            statusText = `${filled}/4 Terisi`;
         }
 
         let registrantsHtml = '';
@@ -728,7 +728,7 @@ function renderDateTable() {
         <td class="px-6 py-4 whitespace-nowrap">
           <span class="px-2 py-1 text-xs font-medium rounded-full ${statusClass}">${statusText}</span>
         </td>
-        <td class="px-6 py-4 whitespace-nowrap"><span class="text-sm font-medium">${filled}/2</span></td>
+        <td class="px-6 py-4 whitespace-nowrap"><span class="text-sm font-medium">${filled}/4</span></td>
         <td class="px-6 py-4"><div class="text-sm">${registrantsHtml}</div></td>
       </tr>
     `;

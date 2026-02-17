@@ -522,10 +522,10 @@ app.post('/api/registrations', publicPostLimiter, (req, res) => {
             if (!s?.phase2_unlocked) return res.status(400).json({ success: false, error: 'Tanggal 21-30 belum dibuka' });
         }
 
-        // max 2 per day
+        // max 4 per day
         const count = db.prepare('SELECT COUNT(*) as count FROM registrations WHERE tanggal=?').get(dateNum);
-        if ((count?.count || 0) >= 2) {
-            return res.status(400).json({ success: false, error: 'Tanggal ini sudah penuh (2 keluarga)' });
+        if ((count?.count || 0) >= 4) {
+            return res.status(400).json({ success: false, error: 'Tanggal ini sudah penuh (4 keluarga)' });
         }
 
         db.prepare(`
@@ -550,10 +550,10 @@ app.put('/api/registrations/:id', requireAdmin, requireSameOriginSoft, (req, res
 
         const { tanggal: dateNum, kode_jalan, nama_keluarga, whatsapp } = v.value;
 
-        // max 2 per day excluding this id
+        // max 4 per day excluding this id
         const count = db.prepare('SELECT COUNT(*) as count FROM registrations WHERE tanggal=? AND id!=?').get(dateNum, id);
-        if ((count?.count || 0) >= 2) {
-            return res.status(400).json({ success: false, error: 'Tanggal ini sudah penuh (2 keluarga)' });
+        if ((count?.count || 0) >= 4) {
+            return res.status(400).json({ success: false, error: 'Tanggal ini sudah penuh (4 keluarga)' });
         }
 
         const result = db.prepare(`

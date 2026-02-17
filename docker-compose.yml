@@ -18,8 +18,8 @@ services:
       - homelab-net
 
     # OPTIONAL: kalau ingin debug dari host server:
-    # ports:
-    #   - "127.0.0.1:8181:3001"
+    ports:
+      - "0.0.0.0:8181:3001"
 
 volumes:
   takjil_database:
